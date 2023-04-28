@@ -95,3 +95,8 @@ spc_calibr("abund", "NWHI", "GLMM")
 spc_calibr("biom", "NWHI", "GLM")
 spc_calibr("biom", "NWHI", "GLMM")
 
+spc_calibr("abund", "PRIAs", "GLM")
+spc_calibr("abund", "PRIAs", "GLMM")
+spc_calibr("biom", "PRIAs", "GLM")
+spc_calibr("biom", "PRIAs", "GLMM")
+
