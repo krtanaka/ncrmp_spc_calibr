@@ -12,9 +12,9 @@ model = c("GLM", "GLMM")
 
 spc_calibr = function(var, region, model){
   
-  var = "abund"
-  region = "NWHI"
-  model = "GLM"
+  # var = "abund"
+  # region = "NWHI"
+  # model = "GLM"
   
   belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>% 
     group_by(ISLAND, DEPTH_BIN, REEF_ZONE, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
