@@ -13,7 +13,7 @@ model = c("GLM", "GLMM")
 spc_calibr = function(var, region, model){
   
   # var = "abund"
-  # region = "NWHI"
+  # region = "MARIAN"
   # model = "GLM"
   
   belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>% 
@@ -35,7 +35,7 @@ spc_calibr = function(var, region, model){
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
   
   tow = readRDS(paste0("data/tow.segment.", var, ".size.20002017.", region, ".rds")) %>% 
-    subset(CENTROIDLON < 0) %>%
+    subset(CENTROIDLON != 0) %>%
     mutate(DEPTH_BIN = case_when(
       DEPTH >= 0  & DEPTH <= 6 ~ "Shallow",
       DEPTH > 6  & DEPTH <= 18 ~ "Mid",
