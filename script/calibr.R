@@ -12,7 +12,7 @@ model = c("GLM", "GLMM")
 
 spc_calibr = function(var, region, model){
   
-  # var = "biom"
+  # var = "abund"
   # region = "MARIAN"
   # model = "GLM"
   
