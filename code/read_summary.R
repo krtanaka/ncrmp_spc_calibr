@@ -70,7 +70,7 @@ df %>%
   geom_point(aes(size = DENSITY, fill = DENSITY, color = DENSITY), shape = 21, alpha = 0.7) +
   scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
-  facet_grid(METHOD~YEAR) +
+  # facet_grid(METHOD~YEAR) +
   labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
        y = expression(paste("Latitude ", degree, "N", sep = ""))) +
   guides(color = guide_legend(expression("Individuals per 100" ~ m^2~"")), 
