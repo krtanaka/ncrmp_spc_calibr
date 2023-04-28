@@ -7,14 +7,14 @@ library(ggplot2)
 rm(list = ls())
 
 var = c("abund", "biom")
-region = c("MHI", "MARIAN", "NHWI", "PRIAs", "SAMOA")
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
 model = c("GLM", "GLMM")
 
 spc_calibr = function(var, region, model){
   
-  # var = "abund"
-  # region = "MHI"
-  # model = "GLM"
+  var = "abund"
+  region = "NWHI"
+  model = "GLM"
   
   belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>% 
     group_by(ISLAND, DEPTH_BIN, REEF_ZONE, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
@@ -89,4 +89,9 @@ spc_calibr("abund", "MARIAN", "GLM")
 spc_calibr("abund", "MARIAN", "GLMM")
 spc_calibr("biom", "MARIAN", "GLM")
 spc_calibr("biom", "MARIAN", "GLMM")
+
+spc_calibr("abund", "NWHI", "GLM")
+spc_calibr("abund", "NWHI", "GLMM")
+spc_calibr("biom", "NWHI", "GLM")
+spc_calibr("biom", "NWHI", "GLMM")
 
