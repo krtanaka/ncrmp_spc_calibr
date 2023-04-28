@@ -84,3 +84,9 @@ spc_calibr("abund", "SAMOA", "GLM")
 spc_calibr("abund", "SAMOA", "GLMM")
 spc_calibr("biom", "SAMOA", "GLM")
 spc_calibr("biom", "SAMOA", "GLMM")
+
+spc_calibr("abund", "MARIAN", "GLM")
+spc_calibr("abund", "MARIAN", "GLMM")
+spc_calibr("biom", "MARIAN", "GLM")
+spc_calibr("biom", "MARIAN", "GLMM")
+
