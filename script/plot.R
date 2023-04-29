@@ -1,16 +1,20 @@
 library(readr)
+library(lubridate)
+library(colorRamps)
+library(ggplot2)
 
 rm(list = ls())
 
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[3]
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
 var = c("abund", "biom")[1]
+species = "APVI"
 
 calibr_belt = read_csv(paste0("output/spc_belt_", var, "_", region, "_GLMM/summary_table.csv")) %>% 
-  subset(GROUP == "APVI") %>% 
+  subset(GROUP == species) %>% 
   subset(METHOD != "1_nSPC")
 
 calibr_tow = read_csv(paste0("output/spc_tow_", var, "_", region, "_GLMM/summary_table.csv")) %>% 
-  subset(GROUP == "APVI") %>% 
+  subset(GROUP == species) %>% 
   subset(METHOD != "1_nSPC")
 
 calibr_tow = calibr_tow$POS.GCF
@@ -19,13 +23,13 @@ calibr_belt = calibr_belt$POS.GCF
 belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>% 
   group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
   summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop")  %>% 
-  subset(SPECIES == "APVI") %>%
+  subset(SPECIES == species) %>%
   mutate(DENSITY = (DENSITY / calibr_belt))
 
 spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region, ".rds"))  %>% 
   group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
   summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>% 
-  subset(SPECIES == "APVI")
+  subset(SPECIES == species)
 
 tow = readRDS(paste0("data/tow.segment.", var, ".size.20002017.", region, ".rds"))  %>% 
   subset(CENTROIDLON != 0) %>%
@@ -33,16 +37,13 @@ tow = readRDS(paste0("data/tow.segment.", var, ".size.20002017.", region, ".rds"
          LATITUDE = CENTROIDLAT) %>% 
   group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
   summarise(DENSITY = sum(!!sym(paste0(var, ".segment"))), .groups = "drop") %>% 
-  subset(SPECIES == "APVI") %>%
+  subset(SPECIES == species) %>%
   mutate(DENSITY = (DENSITY / calibr_tow))
 
 df = rbind(spc, belt, tow)
 
-library(lubridate)
 df$YEAR <- year(df$DATE_)
 df$MONTH <- month(df$DATE_)
-
-library(colorRamps)
 
 df %>% 
   mutate(DENSITY = DENSITY*100,
