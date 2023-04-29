@@ -5,42 +5,51 @@ library(ggplot2)
 
 rm(list = ls())
 
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
 var = c("abund", "biom")[1]
 species = "APVI"
 
-calibr_belt = read_csv(paste0("output/spc_belt_", var, "_", region, "_GLMM/summary_table.csv")) %>% 
-  subset(GROUP == species) %>% 
-  subset(METHOD != "1_nSPC")
+df = NULL
 
-calibr_tow = read_csv(paste0("output/spc_tow_", var, "_", region, "_GLMM/summary_table.csv")) %>% 
-  subset(GROUP == species) %>% 
-  subset(METHOD != "1_nSPC")
-
-calibr_tow = calibr_tow$POS.GCF
-calibr_belt = calibr_belt$POS.GCF
-
-belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>% 
-  group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
-  summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop")  %>% 
-  subset(SPECIES == species) %>%
-  mutate(DENSITY = (DENSITY / calibr_belt))
-
-spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region, ".rds"))  %>% 
-  group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
-  summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>% 
-  subset(SPECIES == species)
-
-tow = readRDS(paste0("data/tow.segment.", var, ".size.20002017.", region, ".rds"))  %>% 
-  subset(CENTROIDLON != 0) %>%
-  mutate(LONGITUDE = CENTROIDLON,
-         LATITUDE = CENTROIDLAT) %>% 
-  group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
-  summarise(DENSITY = sum(!!sym(paste0(var, ".segment"))), .groups = "drop") %>% 
-  subset(SPECIES == species) %>%
-  mutate(DENSITY = (DENSITY / calibr_tow))
-
-df = rbind(spc, belt, tow)
+for (r in 1:length(region)) {
+  
+  calibr_belt = read_csv(paste0("output/spc_belt_", var, "_", region[r], "_GLMM/summary_table.csv")) %>% 
+    subset(GROUP == species) %>% 
+    subset(METHOD != "1_nSPC")
+  
+  calibr_tow = read_csv(paste0("output/spc_tow_", var, "_", region[r], "_GLMM/summary_table.csv")) %>% 
+    subset(GROUP == species) %>% 
+    subset(METHOD != "1_nSPC")
+  
+  calibr_tow = calibr_tow$POS.GCF
+  calibr_belt = calibr_belt$POS.GCF
+  
+  belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region[r], ".rds")) %>% 
+    group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
+    summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop")  %>% 
+    subset(SPECIES == species) %>%
+    mutate(DENSITY = (DENSITY / calibr_belt))
+  
+  spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region[r], ".rds"))  %>% 
+    group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
+    summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>% 
+    subset(SPECIES == species)
+  
+  tow = readRDS(paste0("data/tow.segment.", var, ".size.20002017.", region[r], ".rds"))  %>% 
+    subset(CENTROIDLON != 0) %>%
+    mutate(LONGITUDE = CENTROIDLON,
+           LATITUDE = CENTROIDLAT) %>% 
+    group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
+    summarise(DENSITY = sum(!!sym(paste0(var, ".segment"))), .groups = "drop") %>% 
+    subset(SPECIES == species) %>%
+    mutate(DENSITY = (DENSITY / calibr_tow))
+  
+  df_i = rbind(spc, belt, tow)
+  df_i$region = region[r]
+  
+  df = rbind(df, df_i)
+  
+}
 
 df$YEAR <- year(df$DATE_)
 df$MONTH <- month(df$DATE_)
@@ -49,14 +58,13 @@ df %>%
   mutate(DENSITY = DENSITY*100,
          LONGITUDE = round(LONGITUDE, 1), 
          LATITUDE= round(LATITUDE, 1)) %>% 
-  group_by(METHOD, LONGITUDE, LATITUDE) %>%
+  group_by(METHOD, LONGITUDE, LATITUDE, region) %>%
   summarise(DENSITY = mean(DENSITY)) %>%
   ggplot(aes(LONGITUDE, LATITUDE)) + 
   geom_point(aes(size = DENSITY, fill = DENSITY, color = DENSITY), shape = 21, alpha = 0.7) +
   scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
-  # facet_grid(METHOD~YEAR) +
-  facet_grid(~METHOD) +
+  facet_grid(METHOD~region, scales = "free") +
   labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
        y = expression(paste("Latitude ", degree, "N", sep = ""))) +
   guides(color = guide_legend(expression("Individuals per 100" ~ m^2~"")), 

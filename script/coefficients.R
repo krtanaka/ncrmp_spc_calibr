@@ -1,9 +1,7 @@
 library(dplyr)
 library(ggplot2)
 library(readr)
-
-rm(list = ls())
-
+library(tidyr)
 library(readr)
 
 rm(list = ls())
@@ -49,20 +47,10 @@ df <- df %>%
 colnames(df) <- tolower(colnames(df))
 
 df %>% 
-  subset(group == "APVI") %>%
+  subset(group == "CAIG") %>%
   subset(model == "GLM") %>% 
   subset(method != "1_nSPC") %>% 
   ggplot(aes(region, gcf.pos, color = var)) +
   geom_point(position=position_dodge(width=0.5), size = 4) +
   geom_errorbar(aes(ymin = gcf.pos_2.5, ymax = gcf.pos_95), position=position_dodge(width=0.5), width = 0) +
   facet_wrap(~belt_tow, scales = "free")
-
-df %>% 
-  subset(group == "APVI") %>%
-  group_by(model, region) %>% 
-  summarise(pres.cal = mean(pres.cal, na.rm = T)) %>% 
-  ggplot(aes(region, pres.cal, color = model)) +
-  geom_point(position=position_dodge(width=0.5), size = 4) +
-  facet_wrap(~region, scales = "free")
-
-
