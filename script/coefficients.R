@@ -40,11 +40,11 @@ read_summary_table <- function(folder_path) {
 df_list <- lapply(folders, read_summary_table)
 names(df_list) <- basename(folders)
 
-df <- bind_rows(df_list, .id = "folder")  %>% 
-  separate(folder, into = c("spc", "belt_tow", "var", "region", "model"), sep = "_") %>%
-  rename_all(tolower) %>% 
-  filter(group == "CAIG", model == "GLM", method != "1_nSPC") %>%
-  ggplot(aes(region, gcf.pos, color = var)) +
-  geom_point(position = position_dodge(width = 0.5), size = 4) +
-  geom_errorbar(aes(ymin = gcf.pos_2.5, ymax = gcf.pos_95), position = position_dodge(width = 0.5), width = 0) +
-  facet_wrap(~belt_tow, scales = "free")
+(df <- bind_rows(df_list, .id = "folder")  %>% 
+    separate(folder, into = c("spc", "belt_tow", "var", "region", "model"), sep = "_") %>%
+    rename_all(tolower) %>% 
+    filter(group == "APVI", model == "GLM", method != "1_nSPC") %>%
+    ggplot(aes(region, gcf.pos, color = var)) +
+    geom_point(position = position_dodge(width = 0.5), size = 4) +
+    geom_errorbar(aes(ymin = gcf.pos_2.5, ymax = gcf.pos_95), position = position_dodge(width = 0.5), width = 0) +
+    facet_wrap(~belt_tow, scales = "free"))
