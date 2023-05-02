@@ -7,7 +7,7 @@ library(dplyr)
 rm(list = ls())
 
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
-var = c("abund", "biom")[2]
+var = c("abund", "biom")[1]
 species = "APVI"
 
 df = NULL
