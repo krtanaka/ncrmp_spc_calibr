@@ -62,7 +62,10 @@ df <- df %>%
 
 save(df, file = paste0("output/calibr_", species, "_", var, ".RData"))
 
+png("output/calibr_APVI_map_a.png", units = "in", height = 5, width = 10, res = 100)
+
 df %>% 
+  filter(region %in% c("MHI")) %>%
   mutate(longitude = round(longitude, 1), 
          latitude = round(latitude, 1)) %>% 
   group_by(method, longitude, latitude, region) %>%
@@ -71,17 +74,22 @@ df %>%
   geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.7) +
   scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
-  facet_wrap(method ~ region, scales = "free") +
-  labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
-       y = expression(paste("Latitude ", degree, "N", sep = ""))) +
+  facet_grid(region ~ method) +
+  ggtitle(species) + 
+  # labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
+  #      y = expression(paste("Latitude ", degree, "N", sep = ""))) +
   guides(color = guide_legend(expression("Individuals per 100" ~ m^2~"")), 
          fill = guide_legend(expression("Individuals per 100" ~ m^2~"")),
-         size = guide_legend(expression("Individuals per 100" ~ m^2~"")))
+         size = guide_legend(expression("Individuals per 100" ~ m^2~""))) + 
+  theme(legend.position = "bottom")
+
+dev.off()
+
+png("output/calibr_APVI_map_b.png", units = "in", height = 5, width = 10, res = 100)
 
 df %>% 
   filter(region == "MHI") %>% 
-  mutate(density = density*100,
-         longitude = round(longitude, 1), 
+  mutate(longitude = round(longitude, 1), 
          latitude = round(latitude, 1)) %>% 
   group_by(method, longitude, latitude, year) %>%
   summarise(density = mean(density)) %>%
@@ -90,34 +98,46 @@ df %>%
   scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_grid(method ~ year) +
-  labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
-       y = expression(paste("Latitude ", degree, "N", sep = ""))) +
+  ggtitle(species) + 
+  # labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
+  #      y = expression(paste("Latitude ", degree, "N", sep = ""))) +
   guides(color = guide_legend(expression("Individuals per 100" ~ m^2~"")), 
          fill = guide_legend(expression("Individuals per 100" ~ m^2~"")),
-         size = guide_legend(expression("Individuals per 100" ~ m^2~"")))
+         size = guide_legend(expression("Individuals per 100" ~ m^2~""))) + 
+  theme(legend.position = "bottom",
+        axis.ticks = element_blank(),
+        axis.text = element_blank())
+
+dev.off()
 
 df %>% 
-  mutate(density = density*100) %>% 
   ggplot(aes(depth, density)) + 
   geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.8) +
   scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_grid( ~ method) +
+  ggtitle(species) + 
   guides(color = guide_legend(expression("Individuals per 100" ~ m^2~"")), 
          fill = guide_legend(expression("Individuals per 100" ~ m^2~"")),
-         size = guide_legend(expression("Individuals per 100" ~ m^2~"")))
+         size = guide_legend(expression("Individuals per 100" ~ m^2~""))) + 
+  theme(legend.position = "bottom")
+
+png("output/calibr_APVI_ts.png", units = "in", height = 5, width = 15, res = 100)
 
 df %>%
-  mutate(YEAR = format(date_, "%Y"),
-         density = density*100) %>% 
+  mutate(YEAR = format(date_, "%Y")) %>% 
   group_by(year, method, region) %>%
   summarise(mean_density = mean(density), se_density = sd(density)/sqrt(n())) %>%
   mutate(mean_density = ifelse(mean_density == 0, NA, mean_density),
          se_density = ifelse(se_density == 0, NA, se_density)) %>% 
   ggplot(aes(x = year, y = mean_density, color = method, group = method)) +
   geom_errorbar(aes(ymin = mean_density - se_density, ymax = mean_density + se_density), 
-                position = position_dodge(width = 0.3), width = 0) +
-  geom_point(size = 2, position = position_dodge(width = 0.3), alpha = 0.8) +
-  labs(x = "Year", y = "Density") +
-  facet_wrap(~region, scales = "free_y") + 
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) 
+                position = position_dodge(width = 0.5), width = 0, show.legend = F) +
+  geom_point(size = 2, position = position_dodge(width = 0.5)) +
+  scale_color_discrete("") + 
+  ggtitle(species) + 
+  labs(x = NULL, y = expression("Individuals per 100" ~ m^2~"")) +
+  facet_wrap(~region, scales = "free_y", ncol = 5) + 
+  theme(legend.position = "bottom")
+
+dev.off()
