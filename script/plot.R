@@ -7,7 +7,7 @@ library(dplyr)
 rm(list = ls())
 
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
-var = c("abund", "biom")[1]
+var = c("abund", "biom")[2]
 species = "APVI"
 
 df = NULL
@@ -52,73 +52,69 @@ for (r in 1:length(region)) {
   
 }
 
-df$YEAR <- year(df$DATE_)
-df$MONTH <- month(df$DATE_)
-df$LONGITUDE = ifelse(df$LONGITUDE < 0, df$LONGITUDE + 360, df$LONGITUDE)
+df <- df %>%
+  rename_all(tolower) %>% 
+  mutate(year = year(date_),
+         month = month(date_),
+         day = day(date_),
+         longitude = ifelse(longitude < 0, longitude + 360, longitude),
+         density = density*100)
+
+save(df, file = paste0("output/calibr_", species, "_", var, ".RData"))
 
 df %>% 
-  mutate(DENSITY = DENSITY*100,
-         LONGITUDE = round(LONGITUDE, 1), 
-         LATITUDE= round(LATITUDE, 1)) %>% 
-  group_by(METHOD, LONGITUDE, LATITUDE, region) %>%
-  summarise(DENSITY = mean(DENSITY)) %>%
-  ggplot(aes(LONGITUDE, LATITUDE)) + 
-  geom_point(aes(size = DENSITY, fill = DENSITY, color = DENSITY), shape = 21, alpha = 0.7) +
+  mutate(longitude = round(longitude, 1), 
+         latitude = round(latitude, 1)) %>% 
+  group_by(method, longitude, latitude, region) %>%
+  summarise(density = mean(density)) %>%
+  ggplot(aes(longitude, latitude)) + 
+  geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.7) +
   scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
-  facet_wrap(METHOD~region, scales = "free") +
+  facet_wrap(method ~ region, scales = "free") +
   labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
        y = expression(paste("Latitude ", degree, "N", sep = ""))) +
   guides(color = guide_legend(expression("Individuals per 100" ~ m^2~"")), 
          fill = guide_legend(expression("Individuals per 100" ~ m^2~"")),
-         size = guide_legend(expression("Individuals per 100" ~ m^2~""))) + 
-  theme(legend.position = "bottom",
-        panel.background = element_rect(fill = "gray10"),
-        panel.grid = element_line(color = "gray20", linewidth = 0.1)) 
+         size = guide_legend(expression("Individuals per 100" ~ m^2~"")))
 
 df %>% 
   filter(region == "MHI") %>% 
-  mutate(DENSITY = DENSITY*100,
-         LONGITUDE = round(LONGITUDE, 1), 
-         LATITUDE= round(LATITUDE, 1)) %>% 
-  group_by(METHOD, LONGITUDE, LATITUDE, YEAR) %>%
-  summarise(DENSITY = mean(DENSITY)) %>%
-  ggplot(aes(LONGITUDE, LATITUDE)) + 
-  geom_point(aes(size = DENSITY, fill = DENSITY, color = DENSITY), shape = 21, alpha = 0.7) +
+  mutate(density = density*100,
+         longitude = round(longitude, 1), 
+         latitude = round(latitude, 1)) %>% 
+  group_by(method, longitude, latitude, year) %>%
+  summarise(density = mean(density)) %>%
+  ggplot(aes(longitude, latitude)) + 
+  geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.7) +
   scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
-  facet_grid(METHOD~YEAR) +
+  facet_grid(method ~ year) +
   labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
        y = expression(paste("Latitude ", degree, "N", sep = ""))) +
   guides(color = guide_legend(expression("Individuals per 100" ~ m^2~"")), 
          fill = guide_legend(expression("Individuals per 100" ~ m^2~"")),
-         size = guide_legend(expression("Individuals per 100" ~ m^2~""))) + 
-  theme(legend.position = "bottom",
-        panel.background = element_rect(fill = "gray10"),
-        panel.grid = element_line(color = "gray20", linewidth = 0.1)) 
+         size = guide_legend(expression("Individuals per 100" ~ m^2~"")))
 
 df %>% 
-  mutate(DENSITY = DENSITY*100) %>% 
-  ggplot(aes(DEPTH, DENSITY)) + 
-  geom_point(aes(size = DENSITY, fill = DENSITY, color = DENSITY), shape = 21, alpha = 0.7) +
+  mutate(density = density*100) %>% 
+  ggplot(aes(depth, density)) + 
+  geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.8) +
   scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
-  facet_grid(~METHOD) +
+  facet_grid( ~ method) +
   guides(color = guide_legend(expression("Individuals per 100" ~ m^2~"")), 
          fill = guide_legend(expression("Individuals per 100" ~ m^2~"")),
-         size = guide_legend(expression("Individuals per 100" ~ m^2~""))) + 
-  theme(legend.position = "bottom",
-        panel.background = element_rect(fill = "gray10"),
-        panel.grid = element_line(color = "gray20", linewidth = 0.1)) 
+         size = guide_legend(expression("Individuals per 100" ~ m^2~"")))
 
 df %>%
-  mutate(YEAR = format(DATE_, "%Y"),
-         DENSITY = DENSITY*100) %>% 
-  group_by(YEAR, METHOD, region) %>%
-  summarise(mean_density = mean(DENSITY), se_density = sd(DENSITY)/sqrt(n())) %>%
+  mutate(YEAR = format(date_, "%Y"),
+         density = density*100) %>% 
+  group_by(year, method, region) %>%
+  summarise(mean_density = mean(density), se_density = sd(density)/sqrt(n())) %>%
   mutate(mean_density = ifelse(mean_density == 0, NA, mean_density),
          se_density = ifelse(se_density == 0, NA, se_density)) %>% 
-  ggplot(aes(x = YEAR, y = mean_density, color = METHOD, group = METHOD)) +
+  ggplot(aes(x = year, y = mean_density, color = method, group = method)) +
   geom_errorbar(aes(ymin = mean_density - se_density, ymax = mean_density + se_density), 
                 position = position_dodge(width = 0.3), width = 0) +
   geom_point(size = 2, position = position_dodge(width = 0.3), alpha = 0.8) +
