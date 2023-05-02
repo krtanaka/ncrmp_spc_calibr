@@ -7,7 +7,7 @@ library(dplyr)
 rm(list = ls())
 
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
-var = c("abund", "biom")[1]
+var = c("abund", "biom")[2]
 species = "APVI"
 
 df = NULL
@@ -60,9 +60,12 @@ df <- df %>%
          longitude = ifelse(longitude < 0, longitude + 360, longitude),
          density = density*100)
 
-save(df, file = paste0("output/calibr_", species, "_", var, ".RData"))
+save(df, file = paste0("output/calibr_df/calibr_", species, "_", var, ".RData"))
 
-png("output/calibr_APVI_map_a.png", units = "in", height = 5, width = 10, res = 100)
+if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~"")
+if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~"")
+
+png(paste0("output/plot/calibr_APVI_map_a_", var, ".png"), units = "in", height = 5, width = 10, res = 500)
 
 df %>% 
   filter(region %in% c("MHI")) %>%
@@ -75,17 +78,17 @@ df %>%
   scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_grid(region ~ method) +
-  ggtitle(species) + 
+  ggtitle(paste0(species, ": ", var)) + 
   # labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
   #      y = expression(paste("Latitude ", degree, "N", sep = ""))) +
-  guides(color = guide_legend(expression("Individuals per 100" ~ m^2~"")), 
-         fill = guide_legend(expression("Individuals per 100" ~ m^2~"")),
-         size = guide_legend(expression("Individuals per 100" ~ m^2~""))) + 
+  guides(color = guide_legend(unit), 
+         fill = guide_legend(unit),
+         size = guide_legend(unit)) + 
   theme(legend.position = "bottom")
 
 dev.off()
 
-png("output/calibr_APVI_map_b.png", units = "in", height = 5, width = 10, res = 100)
+png(paste0("output/plot/calibr_APVI_map_b_", var, ".png"),units = "in", height = 5, width = 10, res = 500)
 
 df %>% 
   filter(region == "MHI") %>% 
@@ -98,12 +101,12 @@ df %>%
   scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_grid(method ~ year) +
-  ggtitle(species) + 
+  ggtitle(paste0(species, ": ", var)) + 
   # labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
   #      y = expression(paste("Latitude ", degree, "N", sep = ""))) +
-  guides(color = guide_legend(expression("Individuals per 100" ~ m^2~"")), 
-         fill = guide_legend(expression("Individuals per 100" ~ m^2~"")),
-         size = guide_legend(expression("Individuals per 100" ~ m^2~""))) + 
+  guides(color = guide_legend(unit), 
+         fill = guide_legend(unit),
+         size = guide_legend(unit)) + 
   theme(legend.position = "bottom",
         axis.ticks = element_blank(),
         axis.text = element_blank())
@@ -117,12 +120,12 @@ df %>%
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_grid( ~ method) +
   ggtitle(species) + 
-  guides(color = guide_legend(expression("Individuals per 100" ~ m^2~"")), 
-         fill = guide_legend(expression("Individuals per 100" ~ m^2~"")),
-         size = guide_legend(expression("Individuals per 100" ~ m^2~""))) + 
+  guides(color = guide_legend(unit), 
+         fill = guide_legend(unit),
+         size = guide_legend(unit)) + 
   theme(legend.position = "bottom")
 
-png("output/calibr_APVI_ts.png", units = "in", height = 5, width = 15, res = 100)
+png(paste0("output/plot/calibr_APVI_ts_", var, ".png"), units = "in", height = 5, width = 15, res = 500)
 
 df %>%
   mutate(YEAR = format(date_, "%Y")) %>% 
@@ -135,8 +138,8 @@ df %>%
                 position = position_dodge(width = 0.5), width = 0, show.legend = F) +
   geom_point(size = 2, position = position_dodge(width = 0.5)) +
   scale_color_discrete("") + 
-  ggtitle(species) + 
-  labs(x = NULL, y = expression("Individuals per 100" ~ m^2~"")) +
+  ggtitle(paste0(species, ": ", var)) + 
+  labs(x = NULL, y = unit) +
   facet_wrap(~region, scales = "free_y", ncol = 5) + 
   theme(legend.position = "bottom")
 

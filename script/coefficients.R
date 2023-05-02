@@ -42,7 +42,7 @@ names(df_list) <- basename(folders)
 
 species = "APVI"
 
-png("output/calibr_APVI_coef.png", units = "in", height = 3, width = 7, res = 100)
+png("output/calibr_APVI_coef.png", units = "in", height = 3, width = 7, res = 500)
 
 (df <- bind_rows(df_list, .id = "folder")  %>% 
     separate(folder, into = c("spc", "belt_tow", "var", "region", "model"), sep = "_") %>%
