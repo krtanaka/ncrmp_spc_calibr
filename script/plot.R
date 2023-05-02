@@ -7,7 +7,7 @@ library(dplyr)
 rm(list = ls())
 
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
-var = c("abund", "biom")[2]
+var = c("abund", "biom")[1]
 species = "APVI"
 
 df = NULL
@@ -80,7 +80,7 @@ df %>%
   facet_grid(region ~ method) +
   ggtitle(paste0(species, ": ", var)) + 
   # labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
-  #      y = expression(paste("Latitude ", degree, "N", sep = ""))) +
+       # y = expression(paste("Latitude ", degree, "N", sep = ""))) +
   guides(color = guide_legend(unit), 
          fill = guide_legend(unit),
          size = guide_legend(unit)) + 
@@ -125,7 +125,7 @@ df %>%
          size = guide_legend(unit)) + 
   theme(legend.position = "bottom")
 
-png(paste0("output/plot/calibr_APVI_ts_", var, ".png"), units = "in", height = 5, width = 15, res = 500)
+png(paste0("output/plot/calibr_APVI_ts_a_", var, ".png"), units = "in", height = 5, width = 15, res = 500)
 
 df %>%
   mutate(YEAR = format(date_, "%Y")) %>% 
@@ -138,6 +138,25 @@ df %>%
                 position = position_dodge(width = 0.5), width = 0, show.legend = F) +
   geom_point(size = 2, position = position_dodge(width = 0.5)) +
   scale_color_discrete("") + 
+  ggtitle(paste0(species, ": ", var)) + 
+  labs(x = NULL, y = unit) +
+  facet_wrap(~region, scales = "free_y", ncol = 5) + 
+  theme(legend.position = "bottom")
+
+dev.off()
+
+png(paste0("output/plot/calibr_APVI_ts_b_", var, ".png"), units = "in", height = 5, width = 15, res = 500)
+
+df %>%
+  mutate(YEAR = format(date_, "%Y")) %>% 
+  group_by(year, region) %>%
+  summarise(mean_density = mean(density), se_density = sd(density)/sqrt(n())) %>%
+  mutate(mean_density = ifelse(mean_density == 0, NA, mean_density),
+         se_density = ifelse(se_density == 0, NA, se_density)) %>% 
+  ggplot(aes(x = year, y = mean_density, fill = mean_density)) +
+  geom_errorbar(aes(ymin = mean_density - se_density, ymax = mean_density + se_density), width = 0, show.legend = F) +
+  geom_point(size = 3, shape = 21, show.legend = F) +
+  scale_fill_gradientn(colours = matlab.like(100), "") +
   ggtitle(paste0(species, ": ", var)) + 
   labs(x = NULL, y = unit) +
   facet_wrap(~region, scales = "free_y", ncol = 5) + 
