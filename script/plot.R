@@ -7,7 +7,7 @@ library(dplyr)
 rm(list = ls())
 
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
-var = c("abund", "biom")[2]
+var = c("abund", "biom")[1]
 species = "APVI"
 
 df = NULL
@@ -139,17 +139,18 @@ df %>%
 
 dev.off()
 
-png(paste0("output/plot/calibr_", species, "_depth_", var, ".png"),units = "in", height = 5, width = 10, res = 500)
+png(paste0("output/plot/calibr_", species, "_depth_", var, ".png"),units = "in", height = 8, width = 8, res = 500)
 
 df %>% 
   # filter(method == "nSPC_BLT_TOW") %>%
-  mutate(depth = round(depth, 2)) %>%
+  mutate(depth = round(depth, 1)) %>%
   group_by(method, depth) %>%
   summarise(density = mean(density, na.rm = T)) %>%
   ggplot(aes(depth, density)) + 
-  geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.8, show.legend = F) +
-  scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
-  facet_grid( ~ method) +
+  geom_smooth(method = "gam", color = "gray60", fill = "gray80") + 
+  geom_point(aes(fill = density, color = density), shape = 21, alpha = 0.8, size = 3, show.legend = F) +
+  scale_fill_gradientn(colours = matlab.like(100), trans = "sqrt") +
+  facet_wrap( ~ method, nrow = 2) +
   labs(x = "Depth (m)", y = unit) +
   ggtitle(species) + 
   guides(color = guide_legend(unit), 
