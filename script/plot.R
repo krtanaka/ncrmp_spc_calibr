@@ -139,19 +139,19 @@ df %>%
 
 dev.off()
 
-pdf(paste0("output/plot/calibr_", species, "_depth_", var, ".pdf"), height = 4, width = 8)
+pdf(paste0("output/plot/calibr_", species, "_depth_", var, ".pdf"), height = 10, width = 10)
 
 df %>% 
   # filter(method == "nSPC_BLT_TOW") %>%
-  mutate(depth = round(depth, 2)) %>%
-  group_by(method, depth) %>%
+  mutate(depth = round(depth, 1)) %>%
+  group_by(method, region, depth) %>%
   summarise(density = mean(density, na.rm = T)) %>%
   ggplot(aes(depth, density)) + 
   geom_point(aes(fill = density), shape = 21, alpha = 0.8, size = 3, show.legend = F) +
-  geom_smooth(method = "gam", color = "gray60", fill = "gray80") + 
+  geom_smooth(method = "gam", color = "gray60", fill = "gray80") +
   scale_fill_gradientn(colours = matlab.like(100), trans = "sqrt") +
-  facet_wrap( ~ method, nrow = 1) +
   labs(x = "Depth (m)", y = unit) +
+  facet_grid(region ~ method) +
   ggtitle(species) + 
   guides(color = guide_legend(unit), 
          fill = guide_legend(unit),
