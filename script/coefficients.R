@@ -40,9 +40,9 @@ read_summary_table <- function(folder_path) {
 df_list <- lapply(folders, read_summary_table)
 names(df_list) <- basename(folders)
 
-species = "CAME"
+species = "APVI"
 
-png(paste0("output/plot/calibr_", species, "_coef.png"), units = "in", height = 3, width = 7, res = 500)
+pdf(paste0("output/plot/calibr_", species, "_coef.pdf"), height = 3, width = 7)
 
 (df <- bind_rows(df_list, .id = "folder")  %>% 
     separate(folder, into = c("spc", "belt_tow", "var", "region", "model"), sep = "_") %>%

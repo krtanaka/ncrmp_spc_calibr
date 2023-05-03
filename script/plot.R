@@ -7,7 +7,7 @@ library(dplyr)
 rm(list = ls())
 
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
-var = c("abund", "biom")[1]
+var = c("abund", "biom")[2]
 species = "APVI"
 
 df = NULL
@@ -73,7 +73,7 @@ load(paste0("output/calibr_df/calibr_", species, "_", var, ".RData"))
 if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~"")
 if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~"")
 
-png(paste0("output/plot/calibr_", species, "_map_a_", var, ".png"), units = "in", height = 5, width = 12, res = 500)
+pdf(paste0("output/plot/calibr_", species, "_map_a_", var, ".pdf"), height = 5, width = 12)
 
 df %>% 
   filter(region %in% c("MHI")) %>%
@@ -82,10 +82,10 @@ df %>%
   group_by(method, longitude, latitude, region) %>%
   summarise(density = mean(density)) %>%
   ggplot(aes(longitude, latitude)) + 
-  geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.7) +
+  geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.7) +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_grid(region ~ method) +
-  ggtitle(paste0(species, ": ", var)) + 
+  ggtitle(paste0(species, ": 2005-2019")) + 
   # labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
        # y = expression(paste("Latitude ", degree, "N", sep = ""))) +
   guides(color = guide_legend(unit), 
@@ -95,7 +95,7 @@ df %>%
 
 dev.off()
 
-png(paste0("output/plot/calibr_", species, "_map_b_", var, ".png"), units = "in", height = 5, width = 7, res = 500)
+pdf(paste0("output/plot/calibr_", species, "_map_b_", var, ".pdf"), height = 5, width = 7)
 
 df %>% 
   filter(method == "nSPC_BLT_TOW") %>%
@@ -104,10 +104,10 @@ df %>%
   group_by(longitude, latitude, region) %>%
   summarise(density = mean(density)) %>%
   ggplot(aes(longitude, latitude)) + 
-  geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.7) +
+  geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.7) +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_wrap(~region, scales = "free") +
-  ggtitle(paste0(species, ": ", var)) + 
+  ggtitle(paste0(species, ": 2000-2022")) + 
   guides(color = guide_legend(unit), 
          fill = guide_legend(unit),
          size = guide_legend(unit)) + 
@@ -115,7 +115,7 @@ df %>%
 
 dev.off()
 
-png(paste0("output/plot/calibr_", species, "_map_c_", var, ".png"),units = "in", height = 7, width = 12, res = 500)
+pdf(paste0("output/plot/calibr_", species, "_map_c_", var, ".pdf"),height = 7, width = 12)
 
 df %>% 
   filter(region == "MHI") %>% 
@@ -124,10 +124,10 @@ df %>%
   group_by(method, longitude, latitude, year) %>%
   summarise(density = mean(density)) %>%
   ggplot(aes(longitude, latitude)) + 
-  geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.7) +
+  geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.7) +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_grid(method ~ year) +
-  ggtitle(paste0(species, ": ", var)) + 
+  ggtitle(species) + 
   # labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
   #      y = expression(paste("Latitude ", degree, "N", sep = ""))) +
   guides(color = guide_legend(unit), 
@@ -139,18 +139,18 @@ df %>%
 
 dev.off()
 
-png(paste0("output/plot/calibr_", species, "_depth_", var, ".png"),units = "in", height = 8, width = 8, res = 500)
+pdf(paste0("output/plot/calibr_", species, "_depth_", var, ".pdf"), height = 4, width = 8)
 
 df %>% 
   # filter(method == "nSPC_BLT_TOW") %>%
-  mutate(depth = round(depth, 1)) %>%
+  mutate(depth = round(depth, 2)) %>%
   group_by(method, depth) %>%
   summarise(density = mean(density, na.rm = T)) %>%
   ggplot(aes(depth, density)) + 
+  geom_point(aes(fill = density), shape = 21, alpha = 0.8, size = 3, show.legend = F) +
   geom_smooth(method = "gam", color = "gray60", fill = "gray80") + 
-  geom_point(aes(fill = density, color = density), shape = 21, alpha = 0.8, size = 3, show.legend = F) +
   scale_fill_gradientn(colours = matlab.like(100), trans = "sqrt") +
-  facet_wrap( ~ method, nrow = 2) +
+  facet_wrap( ~ method, nrow = 1) +
   labs(x = "Depth (m)", y = unit) +
   ggtitle(species) + 
   guides(color = guide_legend(unit), 
@@ -159,7 +159,7 @@ df %>%
 
 dev.off()
 
-png(paste0("output/plot/calibr_", species, "_ts_a_", var, ".png"), units = "in", height = 7, width = 10, res = 500)
+pdf(paste0("output/plot/calibr_", species, "_ts_a_", var, ".pdf"), height = 5, width = 10)
 
 df %>%
   filter(method != "nSPC_BLT_TOW") %>%
@@ -173,14 +173,16 @@ df %>%
                 position = position_dodge(width = 0.5), width = 0, show.legend = F) +
   geom_point(size = 2, position = position_dodge(width = 0.5)) +
   scale_color_discrete("") + 
-  ggtitle(paste0(species, ": ", var)) + 
+  ggtitle(species) + 
   labs(x = NULL, y = unit) +
   facet_wrap(~region, scales = "free_y", nrow = 2) + 
-  theme(legend.position = c(0.85, 0.25))
+  scale_x_discrete(limits = unique(df$year)) + # Add this line
+  theme(legend.position = c(0.85, 0.25), 
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 
 dev.off()
 
-png(paste0("output/plot/calibr_", species, "_ts_b_", var, ".png"), units = "in", height = 5, width = 15, res = 500)
+pdf(paste0("output/plot/calibr_", species, "_ts_b_", var, ".pdf"), height = 5, width = 10)
 
 df %>%
   filter(method != "nSPC_BLT_TOW") %>%
@@ -192,10 +194,35 @@ df %>%
   ggplot(aes(x = year, y = mean_density, fill = mean_density)) +
   geom_errorbar(aes(ymin = mean_density - se_density, ymax = mean_density + se_density), width = 0, show.legend = F) +
   geom_point(size = 3, shape = 21, show.legend = F) +
-  scale_fill_gradientn(colours = matlab.like(100), "") +
-  ggtitle(paste0(species, ": ", var)) + 
+  scale_fill_gradientn(colours = matlab.like(100), "", tran = "sqrt") +
+  ggtitle(species) + 
   labs(x = NULL, y = unit) +
-  facet_wrap(~region, scales = "free_y", ncol = 5) + 
-  theme(legend.position = "bottom")
+  facet_wrap(~region, scales = "free_y") +
+  scale_x_discrete(limits = unique(df$year)) + # Add this line
+  theme(legend.position = "bottom", 
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+dev.off()
+
+pdf(paste0("output/plot/calibr_", species, "_ts_c_", var, ".pdf"), height = 5, width = 10)
+
+df %>%
+  filter(method != "nSPC_BLT_TOW" & region == "MHI") %>%
+  mutate(YEAR = format(date_, "%Y")) %>% 
+  group_by(year, island) %>%
+  summarise(mean_density = mean(density), se_density = sd(density)/sqrt(n())) %>%
+  mutate(mean_density = ifelse(mean_density == 0, NA, mean_density),
+         se_density = ifelse(se_density == 0, NA, se_density)) %>% 
+  na.omit() %>% 
+  ggplot(aes(x = year, y = mean_density, fill = mean_density)) +
+  geom_errorbar(aes(ymin = mean_density - se_density, ymax = mean_density + se_density), 
+                width = 0, position = position_dodge(width = 0.5), show.legend = F) +
+  geom_point(size = 3, shape = 21, position = position_dodge(width = 0.5), show.legend = F) +
+  scale_fill_gradientn(colours = matlab.like(100), "", tran = "sqrt") +
+  ggtitle(species) + 
+  labs(x = NULL, y = unit) + 
+  facet_wrap(~island, scales = "free_y") +
+  scale_x_discrete(limits = seq(2005, 2019)) + # Add this line
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 
 dev.off()
