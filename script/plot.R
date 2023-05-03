@@ -95,7 +95,7 @@ df %>%
 
 dev.off()
 
-png(paste0("output/plot/calibr_", species, "_map_b_", var, ".png"), units = "in", height = 8, width = 10, res = 500)
+png(paste0("output/plot/calibr_", species, "_map_b_", var, ".png"), units = "in", height = 5, width = 7, res = 500)
 
 df %>% 
   filter(method == "nSPC_BLT_TOW") %>%
@@ -111,7 +111,7 @@ df %>%
   guides(color = guide_legend(unit), 
          fill = guide_legend(unit),
          size = guide_legend(unit)) + 
-  theme(legend.position = c(0.8, 0.25))
+  theme(legend.position = c(0.85, 0.25))
 
 dev.off()
 
@@ -139,22 +139,26 @@ df %>%
 
 dev.off()
 
+png(paste0("output/plot/calibr_", species, "_depth_", var, ".png"),units = "in", height = 5, width = 10, res = 500)
+
 df %>% 
   # filter(method == "nSPC_BLT_TOW") %>%
-  mutate(depth = round(depth, 1)) %>%
+  mutate(depth = round(depth, 2)) %>%
   group_by(method, depth) %>%
   summarise(density = mean(density, na.rm = T)) %>%
   ggplot(aes(depth, density)) + 
-  geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.8) +
+  geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.8, show.legend = F) +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_grid( ~ method) +
+  labs(x = "Depth (m)", y = unit) +
   ggtitle(species) + 
   guides(color = guide_legend(unit), 
          fill = guide_legend(unit),
-         size = guide_legend(unit)) + 
-  theme(legend.position = "bottom")
+         size = guide_legend(unit))
 
-png(paste0("output/plot/calibr_", species, "_ts_a_", var, ".png"), units = "in", height = 5, width = 15, res = 500)
+dev.off()
+
+png(paste0("output/plot/calibr_", species, "_ts_a_", var, ".png"), units = "in", height = 7, width = 10, res = 500)
 
 df %>%
   filter(method != "nSPC_BLT_TOW") %>%
@@ -170,8 +174,8 @@ df %>%
   scale_color_discrete("") + 
   ggtitle(paste0(species, ": ", var)) + 
   labs(x = NULL, y = unit) +
-  facet_wrap(~region, scales = "free_y", ncol = 5) + 
-  theme(legend.position = "bottom")
+  facet_wrap(~region, scales = "free_y", nrow = 2) + 
+  theme(legend.position = c(0.85, 0.25))
 
 dev.off()
 
