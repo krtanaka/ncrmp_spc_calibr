@@ -111,7 +111,7 @@ df %>%
   guides(color = guide_legend(unit), 
          fill = guide_legend(unit),
          size = guide_legend(unit)) + 
-  theme(legend.position = "bottom")
+  theme(legend.position = c(0.8, 0.25))
 
 dev.off()
 
