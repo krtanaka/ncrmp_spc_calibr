@@ -65,7 +65,7 @@ save(df, file = paste0("output/calibr_df/calibr_", species, "_", var, ".RData"))
 if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~"")
 if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~"")
 
-png(paste0("output/plot/calibr_APVI_map_a_", var, ".png"), units = "in", height = 5, width = 10, res = 500)
+png(paste0("output/plot/calibr_", species, "_map_a_", var, ".png"), units = "in", height = 5, width = 10, res = 500)
 
 df %>% 
   filter(region %in% c("MHI")) %>%
@@ -88,7 +88,28 @@ df %>%
 
 dev.off()
 
-png(paste0("output/plot/calibr_APVI_map_b_", var, ".png"),units = "in", height = 5, width = 10, res = 500)
+png(paste0("output/plot/calibr_", species, "_map_b_", var, ".png"), units = "in", height = 5, width = 5, res = 500)
+
+df %>% 
+  # filter(region %in% c("MHI")) %>%
+  mutate(longitude = round(longitude, 1), 
+         latitude = round(latitude, 1)) %>% 
+  group_by(longitude, latitude, region) %>%
+  summarise(density = mean(density)) %>%
+  ggplot(aes(longitude, latitude)) + 
+  geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.7) +
+  scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
+  scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
+  facet_wrap(~region, scales = "free") +
+  ggtitle(paste0(species, ": ", var)) + 
+  guides(color = guide_legend(unit), 
+         fill = guide_legend(unit),
+         size = guide_legend(unit)) + 
+  theme(legend.position = "bottom")
+
+dev.off()
+
+png(paste0("output/plot/calibr_", species, "_map_b_", var, ".png"),units = "in", height = 5, width = 10, res = 500)
 
 df %>% 
   filter(region == "MHI") %>% 
@@ -125,7 +146,7 @@ df %>%
          size = guide_legend(unit)) + 
   theme(legend.position = "bottom")
 
-png(paste0("output/plot/calibr_APVI_ts_a_", var, ".png"), units = "in", height = 5, width = 15, res = 500)
+png(paste0("output/plot/calibr_", species, "_ts_a_", var, ".png"), units = "in", height = 5, width = 15, res = 500)
 
 df %>%
   mutate(YEAR = format(date_, "%Y")) %>% 
@@ -145,7 +166,7 @@ df %>%
 
 dev.off()
 
-png(paste0("output/plot/calibr_APVI_ts_b_", var, ".png"), units = "in", height = 5, width = 15, res = 500)
+png(paste0("output/plot/calibr_", species, "_ts_b_", var, ".png"), units = "in", height = 5, width = 15, res = 500)
 
 df %>%
   mutate(YEAR = format(date_, "%Y")) %>% 
