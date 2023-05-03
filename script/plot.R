@@ -7,7 +7,7 @@ library(dplyr)
 rm(list = ls())
 
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
-var = c("abund", "biom")[1]
+var = c("abund", "biom")[2]
 species = "APVI"
 
 df = NULL
@@ -60,12 +60,20 @@ df <- df %>%
          longitude = ifelse(longitude < 0, longitude + 360, longitude),
          density = density*100)
 
+df_calibr <- df %>%
+  group_by(island, depth, date_, latitude, longitude, species, region, year, month, day) %>%
+  summarize(density = mean(density, na.rm = T)) %>% 
+  mutate(method = "nSPC_BLT_TOW")
+
+df = rbind(df, df_calibr)
+
 save(df, file = paste0("output/calibr_df/calibr_", species, "_", var, ".RData"))
+load(paste0("output/calibr_df/calibr_", species, "_", var, ".RData"))
 
 if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~"")
 if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~"")
 
-png(paste0("output/plot/calibr_", species, "_map_a_", var, ".png"), units = "in", height = 5, width = 10, res = 500)
+png(paste0("output/plot/calibr_", species, "_map_a_", var, ".png"), units = "in", height = 5, width = 12, res = 500)
 
 df %>% 
   filter(region %in% c("MHI")) %>%
@@ -75,7 +83,6 @@ df %>%
   summarise(density = mean(density)) %>%
   ggplot(aes(longitude, latitude)) + 
   geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.7) +
-  scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_grid(region ~ method) +
   ggtitle(paste0(species, ": ", var)) + 
@@ -88,17 +95,16 @@ df %>%
 
 dev.off()
 
-png(paste0("output/plot/calibr_", species, "_map_b_", var, ".png"), units = "in", height = 5, width = 5, res = 500)
+png(paste0("output/plot/calibr_", species, "_map_b_", var, ".png"), units = "in", height = 8, width = 10, res = 500)
 
 df %>% 
-  # filter(region %in% c("MHI")) %>%
+  filter(method == "nSPC_BLT_TOW") %>%
   mutate(longitude = round(longitude, 1), 
          latitude = round(latitude, 1)) %>% 
   group_by(longitude, latitude, region) %>%
   summarise(density = mean(density)) %>%
   ggplot(aes(longitude, latitude)) + 
   geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.7) +
-  scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_wrap(~region, scales = "free") +
   ggtitle(paste0(species, ": ", var)) + 
@@ -109,7 +115,7 @@ df %>%
 
 dev.off()
 
-png(paste0("output/plot/calibr_", species, "_map_b_", var, ".png"),units = "in", height = 5, width = 10, res = 500)
+png(paste0("output/plot/calibr_", species, "_map_c_", var, ".png"),units = "in", height = 7, width = 12, res = 500)
 
 df %>% 
   filter(region == "MHI") %>% 
@@ -119,7 +125,6 @@ df %>%
   summarise(density = mean(density)) %>%
   ggplot(aes(longitude, latitude)) + 
   geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.7) +
-  scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_grid(method ~ year) +
   ggtitle(paste0(species, ": ", var)) + 
@@ -135,9 +140,12 @@ df %>%
 dev.off()
 
 df %>% 
+  # filter(method == "nSPC_BLT_TOW") %>%
+  mutate(depth = round(depth, 1)) %>%
+  group_by(method, depth) %>%
+  summarise(density = mean(density, na.rm = T)) %>%
   ggplot(aes(depth, density)) + 
   geom_point(aes(size = density, fill = density, color = density), shape = 21, alpha = 0.8) +
-  scale_color_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_grid( ~ method) +
   ggtitle(species) + 
@@ -149,12 +157,13 @@ df %>%
 png(paste0("output/plot/calibr_", species, "_ts_a_", var, ".png"), units = "in", height = 5, width = 15, res = 500)
 
 df %>%
+  filter(method != "nSPC_BLT_TOW") %>%
   mutate(YEAR = format(date_, "%Y")) %>% 
   group_by(year, method, region) %>%
   summarise(mean_density = mean(density), se_density = sd(density)/sqrt(n())) %>%
   mutate(mean_density = ifelse(mean_density == 0, NA, mean_density),
          se_density = ifelse(se_density == 0, NA, se_density)) %>% 
-  ggplot(aes(x = year, y = mean_density, color = method, group = method)) +
+  ggplot(aes(x = year, y = mean_density, color = method)) +
   geom_errorbar(aes(ymin = mean_density - se_density, ymax = mean_density + se_density), 
                 position = position_dodge(width = 0.5), width = 0, show.legend = F) +
   geom_point(size = 2, position = position_dodge(width = 0.5)) +
@@ -169,6 +178,7 @@ dev.off()
 png(paste0("output/plot/calibr_", species, "_ts_b_", var, ".png"), units = "in", height = 5, width = 15, res = 500)
 
 df %>%
+  filter(method != "nSPC_BLT_TOW") %>%
   mutate(YEAR = format(date_, "%Y")) %>% 
   group_by(year, region) %>%
   summarise(mean_density = mean(density), se_density = sd(density)/sqrt(n())) %>%
