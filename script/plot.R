@@ -221,12 +221,10 @@ df %>%
 
 dev.off()
 
-pdf(paste0("output/plot/calibr_", species, "_ts_c_", var, ".pdf"), height = 10, width = 10)
+pdf(paste0("output/plot/calibr_", species, "_ts_c_", var, ".pdf"), height = 10, width = 20)
 
-dfi = df %>%
-  filter(method != "nSPC_BLT_TOW" & region == "MARIAN")
-
-dfi %>%
+df %>%
+  filter(method != "nSPC_BLT_TOW") %>% 
   mutate(YEAR = format(date_, "%Y")) %>% 
   group_by(year, island) %>%
   summarise(mean_density = mean(density), se_density = sd(density)/sqrt(n())) %>%
@@ -241,7 +239,7 @@ dfi %>%
   ggtitle(species) + 
   labs(x = NULL, y = unit) + 
   facet_wrap(~island, scales = "free_y") +
-  scale_x_discrete(limits = unique(dfi$year)) +
+  scale_x_discrete(limits = unique(df$year)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 
 dev.off()
