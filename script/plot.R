@@ -154,20 +154,19 @@ df %>%
 
 dev.off()
 
-pdf(paste0("output/plot/calibr_", species, "_depth_", var, ".pdf"), height = 10, width = 10)
+pdf(paste0("output/plot/calibr_", species, "_depth_", var, ".pdf"), height = 5, width = 10)
 
 df %>% 
-  # filter(method == "nSPC_BLT_TOW") %>%
-  mutate(depth = round(depth, 0)) %>%
+  filter(method == "nSPC_BLT_TOW") %>%
+  mutate(depth = round(depth, 1)) %>%
   group_by(method, region, depth) %>%
   summarise(density = mean(density, na.rm = T)) %>%
-  # mutate(density = log10(density + 1)) %>% 
   ggplot(aes(depth, density)) + 
   geom_smooth(method = "gam", color = "gray60", fill = "gray80") +
   geom_point(aes(fill = density), shape = 21, alpha = 0.8, size = 3, show.legend = F) +
   scale_fill_gradientn(colours = matlab.like(100), trans = "sqrt") +
   labs(x = "Depth (m)", y = unit) +
-  facet_grid(region ~ method) +
+  facet_grid(~region) +
   ggtitle(species) + 
   guides(color = guide_legend(unit), 
          fill = guide_legend(unit),
@@ -195,7 +194,10 @@ df %>%
   scale_x_discrete(limits = unique(df$year)) + # Add this line
   theme(legend.position = c(0.85, 0.25), 
     # legend.position = "right",
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+    legend.key = element_rect(colour = NA, fill = NA),
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    legend.box.background = element_rect(fill = "transparent", colour = NA))
 
 dev.off()
 
