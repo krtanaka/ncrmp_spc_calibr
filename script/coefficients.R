@@ -41,6 +41,12 @@ df_list <- lapply(folders, read_summary_table)
 names(df_list) <- basename(folders)
 
 species = "APVI"
+species = "ACLI"
+species = "CAME"
+species = "MOGR"
+species = "NALI"
+species = "SESC"
+species = "LUFU"
 
 pdf(paste0("output/plot/calibr_", species, "_coef.pdf"), height = 3, width = 7)
 
