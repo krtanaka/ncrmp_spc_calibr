@@ -99,4 +99,3 @@ spc_calibr("abund", "PRIAs", "GLM")
 spc_calibr("abund", "PRIAs", "GLMM")
 spc_calibr("biom", "PRIAs", "GLM")
 spc_calibr("biom", "PRIAs", "GLMM")
-
