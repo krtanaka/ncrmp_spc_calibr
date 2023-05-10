@@ -14,7 +14,7 @@ species = "ACLI"
 species = "CAME"
 species = "MOGR"
 species = "NALI"
-species = "SESC"
+species = "SCSC"
 species = "LUFU"
 
 df = NULL
@@ -130,7 +130,7 @@ dev.off()
 pdf(paste0("output/plot/calibr_", species, "_map_c_", var, ".pdf"),height = 7, width = 12)
 
 df %>% 
-  filter(region %in% c("MARIAN")) %>% 
+  filter(region %in% c("MHI")) %>% 
   mutate(longitude = round(longitude, 1), 
          latitude = round(latitude, 1)) %>% 
   group_by(method, longitude, latitude, year) %>%
@@ -177,7 +177,7 @@ dev.off()
 pdf(paste0("output/plot/calibr_", species, "_ts_a_", var, ".pdf"), height = 5, width = 10)
 
 df %>%
-  filter(method != "nSPC_BLT_TOW") %>%
+  # filter(method != "nSPC_BLT_TOW") %>%
   mutate(YEAR = format(date_, "%Y")) %>% 
   group_by(year, method, region) %>%
   summarise(mean_density = mean(density), se_density = sd(density)/sqrt(n())) %>%

@@ -45,7 +45,7 @@ species = "ACLI"
 species = "CAME"
 species = "MOGR"
 species = "NALI"
-species = "SESC"
+species = "SCSC"
 species = "LUFU"
 
 pdf(paste0("output/plot/calibr_", species, "_coef.pdf"), height = 3, width = 7)
