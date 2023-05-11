@@ -48,8 +48,6 @@ species = "NALI"
 species = "SCSC"
 species = "LUFU"
 
-pdf(paste0("output/plot/calibr_", species, "_coef.pdf"), height = 3, width = 7)
-
 (df <- bind_rows(df_list, .id = "folder")  %>% 
     separate(folder, into = c("spc", "belt_tow", "var", "region", "model"), sep = "_") %>%
     rename_all(tolower) %>% 
@@ -62,4 +60,4 @@ pdf(paste0("output/plot/calibr_", species, "_coef.pdf"), height = 3, width = 7)
     scale_color_discrete(species) + 
     labs(x = "Region", y = "Gear Calibration Factor"))
 
-dev.off()
+ggsave(last_plot(),file = paste0("output/plot/calibr_", species, "_coef.pdf"), height = 3, width = 7)
