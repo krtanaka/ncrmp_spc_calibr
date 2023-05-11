@@ -80,8 +80,6 @@ load(paste0("output/calibr_df/calibr_", species, "_", var, ".RData"))
 if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~"")
 if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~"")
 
-pdf(paste0("output/plot/calibr_", species, "_map_a_", var, ".pdf"), height = 5, width = 12)
-
 df %>% 
   mutate(longitude = round(longitude, 1), 
          latitude = round(latitude, 1)) %>% 
@@ -102,9 +100,7 @@ df %>%
         legend.background = element_rect(fill = "transparent", colour = NA),
         legend.box.background = element_rect(fill = "transparent", colour = NA))
 
-dev.off()
-
-pdf(paste0("output/plot/calibr_", species, "_map_b_", var, ".pdf"), height = 5, width = 7)
+ggsave(last_plot(),file = paste0("output/plot/calibr_", species, "_map_a_", var, ".pdf"), height = 5, width = 12)
 
 df %>% 
   filter(method == "nSPC_BLT_TOW") %>%
@@ -125,9 +121,7 @@ df %>%
         legend.background = element_rect(fill = "transparent", colour = NA),
         legend.box.background = element_rect(fill = "transparent", colour = NA))
 
-dev.off()
-
-pdf(paste0("output/plot/calibr_", species, "_map_c_", var, ".pdf"),height = 7, width = 12)
+ggsave(last_plot(),file = paste0("output/plot/calibr_", species, "_map_b_", var, ".pdf"), height = 5, width = 7)
 
 df %>% 
   filter(region %in% c("MHI")) %>% 
@@ -140,8 +134,6 @@ df %>%
   scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
   facet_grid(method ~ year) +
   ggtitle(species) + 
-  # labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
-  #      y = expression(paste("Latitude ", degree, "N", sep = ""))) +
   guides(color = guide_legend(unit), 
          fill = guide_legend(unit),
          size = guide_legend(unit)) + 
@@ -152,9 +144,7 @@ df %>%
         legend.background = element_rect(fill = "transparent", colour = NA),
         legend.box.background = element_rect(fill = "transparent", colour = NA))
 
-dev.off()
-
-pdf(paste0("output/plot/calibr_", species, "_depth_", var, ".pdf"), height = 5, width = 10)
+ggsave(last_plot(),file = paste0("output/plot/calibr_", species, "_map_c_", var, ".pdf"),height = 7, width = 12)
 
 df %>% 
   filter(method == "nSPC_BLT_TOW") %>%
@@ -172,9 +162,7 @@ df %>%
          fill = guide_legend(unit),
          size = guide_legend(unit))
 
-dev.off()
-
-pdf(paste0("output/plot/calibr_", species, "_ts_a_", var, ".pdf"), height = 5, width = 10)
+ggsave(last_plot(),file = paste0("output/plot/calibr_", species, "_depth_", var, ".pdf"), height = 5, width = 10)
 
 df %>%
   # filter(method != "nSPC_BLT_TOW") %>%
@@ -193,15 +181,12 @@ df %>%
   facet_wrap(~region, scales = "free_y") +
   scale_x_discrete(limits = unique(df$year)) + # Add this line
   theme(legend.position = c(0.85, 0.25), 
-    # legend.position = "right",
     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
     legend.key = element_rect(colour = NA, fill = NA),
     legend.background = element_rect(fill = "transparent", colour = NA),
     legend.box.background = element_rect(fill = "transparent", colour = NA))
 
-dev.off()
-
-pdf(paste0("output/plot/calibr_", species, "_ts_b_", var, ".pdf"), height = 5, width = 10)
+ggsave(last_plot(),file = paste0("output/plot/calibr_", species, "_ts_a_", var, ".pdf"), height = 5, width = 10)
 
 df %>%
   filter(method != "nSPC_BLT_TOW") %>%
@@ -221,9 +206,7 @@ df %>%
   theme(legend.position = "bottom", 
         axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 
-dev.off()
-
-pdf(paste0("output/plot/calibr_", species, "_ts_c_", var, ".pdf"), height = 10, width = 20)
+ggsave(last_plot(),file = paste0("output/plot/calibr_", species, "_ts_b_", var, ".pdf"), height = 5, width = 10)
 
 df %>%
   filter(method != "nSPC_BLT_TOW") %>% 
@@ -244,4 +227,4 @@ df %>%
   scale_x_discrete(limits = unique(df$year)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 
-dev.off()
+ggsave(last_plot(),file = paste0("output/plot/calibr_", species, "_ts_c_", var, ".pdf"), height = 10, width = 20)
