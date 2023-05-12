@@ -40,24 +40,37 @@ read_summary_table <- function(folder_path) {
 df_list <- lapply(folders, read_summary_table)
 names(df_list) <- basename(folders)
 
-species = "APVI"
-species = "ACLI"
-species = "CAME"
-species = "MOGR"
-species = "NALI"
-species = "SCSC"
-species = "LUFU"
+species = c("APVI", "ACLI", "CAME", "MOGR", "NALI", "SCSC", "LUFU")
 
-(df <- bind_rows(df_list, .id = "folder")  %>% 
+for (s in 1:length(species)) {
+  
+  p1 <- bind_rows(df_list, .id = "folder")  %>% 
     separate(folder, into = c("spc", "belt_tow", "var", "region", "model"), sep = "_") %>%
     rename_all(tolower) %>% 
-    filter(group == species, model == "GLM", method != "1_nSPC") %>%
-    ggplot(aes(region, gcf.pos, color = var)) +
+    filter(group == species[s], model == "GLM", method != "1_nSPC") %>%
+    ggplot(aes(region, gcf.pres, color = var)) +
     geom_point(position = position_dodge(width = 0.3), size = 2) +
+    geom_errorbar(aes(ymin = gcf.pres_2.5, ymax = gcf.pres_95), 
+                  position = position_dodge(width = 0.3), width = 0, show.legend = F) +
+    facet_wrap(~belt_tow, scales = "free") + 
+    scale_color_discrete(species[s]) + 
+    labs(x = "", y = "Gear calibration factor for presence-absence data") + 
+    theme(legend.position = "top")
+  
+  p2 <- bind_rows(df_list, .id = "folder")  %>% 
+    separate(folder, into = c("spc", "belt_tow", "var", "region", "model"), sep = "_") %>%
+    rename_all(tolower) %>% 
+    filter(group == species[s], model == "GLM", method != "1_nSPC") %>%
+    ggplot(aes(region, gcf.pos, color = var)) +
+    geom_point(position = position_dodge(width = 0.3), size = 2, show.legend = F) +
     geom_errorbar(aes(ymin = gcf.pos_2.5, ymax = gcf.pos_95), 
                   position = position_dodge(width = 0.3), width = 0, show.legend = F) +
     facet_wrap(~belt_tow, scales = "free") + 
-    scale_color_discrete(species) + 
-    labs(x = "Region", y = "Gear Calibration Factor"))
-
-ggsave(last_plot(),file = paste0("output/plot/calibr_", species, "_coef.pdf"), height = 3, width = 7)
+    scale_color_discrete(species[s]) + 
+    labs(x = "", y = "Gear calibration factor for positive-only data")
+  
+  p1 / p2
+  
+  ggsave(last_plot(),file = paste0("output/plot/calibr_", species[s], "_coef.pdf"), height = 10, width = 10)
+  
+}
