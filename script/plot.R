@@ -89,8 +89,6 @@ for (s in 1:length(species)) {
   
   save(df, file = paste0("output/calibr_df/calibr_", species[s], "_", var, ".RData"))
   
-  load(paste0("output/calibr_df/calibr_", species[s], "_", var, ".RData"))
-  
   if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~"")
   if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~"")
   
@@ -114,7 +112,7 @@ for (s in 1:length(species)) {
           legend.background = element_rect(fill = "transparent", colour = NA),
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
-  ggsave(last_plot(),file = paste0("output/plot/calibr_", species[s], "_map_a_", var, ".pdf"), height = 5, width = 12)
+  ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, ".pdf"), height = 5, width = 12)
   
   df %>% 
     filter(method == "nSPC_BLT_TOW") %>%
@@ -135,10 +133,20 @@ for (s in 1:length(species)) {
           legend.background = element_rect(fill = "transparent", colour = NA),
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
-  ggsave(last_plot(),file = paste0("output/plot/calibr_", species[s], "_map_b_", var, ".pdf"), height = 5, width = 7)
+  ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, ".pdf"), height = 5, width = 7)
+  
+  if (species[s] == "APVI") {
+    
+    region_i = c("MHI")
+    
+  } else {
+    
+    region_i = c("MARIAN")
+    
+  }
   
   df %>% 
-    filter(region %in% c("MHI")) %>%
+    filter(region %in% region_i) %>%
     mutate(longitude = round(longitude, 1), 
            latitude = round(latitude, 1)) %>% 
     group_by(method, longitude, latitude, year) %>%
@@ -158,7 +166,7 @@ for (s in 1:length(species)) {
           legend.background = element_rect(fill = "transparent", colour = NA),
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
-  ggsave(last_plot(),file = paste0("output/plot/calibr_", species[s], "_map_c_", var, ".pdf"),height = 7, width = 12)
+  ggsave(last_plot(),file = paste0("output/plot/map_c_", species[s], "_", var, ".pdf"),height = 7, width = 12)
   
   df %>% 
     filter(method == "nSPC_BLT_TOW") %>%
@@ -176,7 +184,7 @@ for (s in 1:length(species)) {
            fill = guide_legend(unit),
            size = guide_legend(unit))
   
-  ggsave(last_plot(),file = paste0("output/plot/calibr_", species[s], "_depth_", var, ".pdf"), height = 5, width = 10)
+  ggsave(last_plot(),file = paste0("output/plot/depth_", species[s], "_", var, ".pdf"), height = 5, width = 10)
   
   df %>%
     filter(method != "nSPC_BLT_TOW") %>%
@@ -200,7 +208,7 @@ for (s in 1:length(species)) {
           legend.background = element_rect(fill = "transparent", colour = NA),
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
-  ggsave(last_plot(),file = paste0("output/plot/calibr_", species[s], "_ts_a_", var, ".pdf"), height = 5, width = 10)
+  ggsave(last_plot(),file = paste0("output/plot/ts_a_", species[s], "_", var, ".pdf"), height = 5, width = 10)
   
   df %>%
     filter(method != "nSPC_BLT_TOW") %>%
@@ -220,7 +228,7 @@ for (s in 1:length(species)) {
     theme(legend.position = "bottom", 
           axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   
-  ggsave(last_plot(),file = paste0("output/plot/calibr_", species[s], "_ts_b_", var, ".pdf"), height = 5, width = 10)
+  ggsave(last_plot(),file = paste0("output/plot/ts_b_", species[s], "_", var, ".pdf"), height = 5, width = 10)
   
   df %>%
     filter(method != "nSPC_BLT_TOW") %>% 
@@ -241,6 +249,6 @@ for (s in 1:length(species)) {
     scale_x_discrete(limits = unique(df$year)) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   
-  ggsave(last_plot(),file = paste0("output/plot/calibr_", species[s], "_ts_c_", var, ".pdf"), height = 10, width = 20)
+  ggsave(last_plot(),file = paste0("output/plot/ts_c_", species[s], "_", var, ".pdf"), height = 10, width = 20)
   
 }

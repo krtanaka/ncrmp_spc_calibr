@@ -4,6 +4,7 @@ library(readr)
 library(tidyr)
 library(readr)
 library(tidyverse)
+library(patchwork)
 
 rm(list = ls())
 
@@ -71,6 +72,6 @@ for (s in 1:length(species)) {
   
   p1 / p2
   
-  ggsave(last_plot(),file = paste0("output/plot/calibr_", species[s], "_coef.pdf"), height = 10, width = 10)
+  ggsave(last_plot(),file = paste0("output/plot/coef_", species[s], ".pdf"), height = 10, width = 10)
   
 }
