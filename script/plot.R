@@ -3,78 +3,94 @@ library(lubridate)
 library(colorRamps)
 library(ggplot2)
 library(dplyr)
+library(boot)
+library(ggh4x)
 
 rm(list = ls())
 
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
 var = c("abund", "biom")[1]
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
+species = c("APVI", "ACLI", "CAME", "MOGR", "NALI", "SCSC", "LUFU")
 
-species = "APVI"
-species = "ACLI"
-species = "CAME"
-species = "MOGR"
-species = "NALI"
-species = "SCSC"
-species = "LUFU"
-
-df = NULL
-
-for (r in 1:length(region)) {
+for (s in 1:length(species)) {
   
-  calibr_belt = read_csv(paste0("output/spc_belt_", var, "_", region[r], "_GLMM/summary_table.csv")) %>% 
-    filter(GROUP == species) %>% 
-    filter(METHOD != "1_nSPC")
+  # s = 1
   
-  calibr_tow = read_csv(paste0("output/spc_tow_", var, "_", region[r], "_GLMM/summary_table.csv")) %>% 
-    filter(GROUP == species) %>% 
-    filter(METHOD != "1_nSPC")
+  df = NULL
   
-  calibr_tow = calibr_tow$POS.GCF
-  calibr_belt = calibr_belt$POS.GCF
+  for (r in 1:length(region)) {
+    
+    # r = 1
+    
+    calibr_belt = read_csv(paste0("output/spc_belt_", var, "_", region[r], "_GLMM/summary_table.csv")) %>% 
+      filter(GROUP == species[s]) %>% 
+      filter(METHOD != "1_nSPC")
+    
+    calibr_tow = read_csv(paste0("output/spc_tow_", var, "_", region[r], "_GLMM/summary_table.csv")) %>% 
+      filter(GROUP == species[s]) %>% 
+      filter(METHOD != "1_nSPC")
+    
+    calibr_tow_pres = calibr_tow$PRES.GCF
+    calibr_belt_pres = calibr_belt$PRES.GCF
+    
+    calibr_tow_pos = calibr_tow$POS.GCF
+    calibr_belt_pos = calibr_belt$POS.GCF
+    
+    belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region[r], ".rds")) %>%
+      filter(SPECIES == species[s]) %>%
+      group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>%
+      summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>%
+      mutate(PRESENCE = inv.logit(logit(DENSITY > 0 - calibr_belt_pres)),
+             DENSITY = DENSITY / calibr_belt_pos)
+    
+    tow = readRDS(paste0("data/tow.segment.", var, ".size.20002017.", region[r], ".rds"))  %>% 
+      filter(SPECIES == species[s] & CENTROIDLON != 0 & SIZE_10cm != "(40,50]") %>%
+      mutate(LONGITUDE = CENTROIDLON,
+             LATITUDE = CENTROIDLAT) %>% 
+      group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
+      summarise(DENSITY = sum(!!sym(paste0(var, ".segment"))), .groups = "drop") %>% 
+      mutate(PRESENCE = inv.logit(logit(DENSITY > 0 - calibr_belt_pres)),
+             DENSITY = DENSITY / calibr_belt_pos)
+    
+    spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region[r], ".rds"))  %>% 
+      filter(SPECIES == species[s]) %>% 
+      group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
+      summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>%
+      mutate(PRESENCE = as.integer(DENSITY > 0)) 
+    
+    df_i = rbind(spc, belt, tow)
+    df_i$region = region[r]
+    
+    df = rbind(df, df_i)
+    
+  }
   
-  belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region[r], ".rds")) %>% 
-    group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
-    summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop")  %>% 
-    filter(SPECIES == species) %>%
-    mutate(DENSITY = (DENSITY / calibr_belt))
+  df = df %>% rename_all(tolower)
   
-  spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region[r], ".rds"))  %>% 
-    group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
-    summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>% 
-    filter(SPECIES == species)
+  df_tow_blt <- df %>%
+    filter(method != "nSPC") %>% 
+    mutate(density = density * presence)
   
-  tow = readRDS(paste0("data/tow.segment.", var, ".size.20002017.", region[r], ".rds"))  %>% 
-    filter(CENTROIDLON != 0) %>%
-    mutate(LONGITUDE = CENTROIDLON,
-           LATITUDE = CENTROIDLAT) %>% 
-    group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
-    summarise(DENSITY = sum(!!sym(paste0(var, ".segment"))), .groups = "drop") %>% 
-    filter(SPECIES == species) %>%
-    mutate(DENSITY = (DENSITY / calibr_tow))
+  df_spc = df %>%
+    filter(method == "nSPC")
   
-  df_i = rbind(spc, belt, tow)
-  df_i$region = region[r]
+  df_nSPC_BLT_TOW = rbind(df_spc, df_tow_blt) %>% 
+    group_by(region, island, depth, date_, latitude, longitude, species) %>%
+    summarize(presence = mean(presence, na.rm = T),
+              density = mean(density, na.rm = T)) %>% 
+    mutate(method = "nSPC_BLT_TOW")
   
-  df = rbind(df, df_i)
+  df <- rbind(df_spc, df_tow_blt, df_nSPC_BLT_TOW) %>% 
+    mutate(year = year(date_),
+           month = month(date_),
+           day = day(date_),
+           longitude = ifelse(longitude < 0, longitude + 360, longitude),
+           density = density * 100)
+  
+  save(df, file = paste0("output/calibr_df/calibr_", species[s], "_", var, ".RData"))
   
 }
 
-df <- df %>%
-  rename_all(tolower) %>% 
-  mutate(year = year(date_),
-         month = month(date_),
-         day = day(date_),
-         longitude = ifelse(longitude < 0, longitude + 360, longitude),
-         density = density*100)
-
-df_calibr <- df %>%
-  group_by(island, depth, date_, latitude, longitude, species, region, year, month, day) %>%
-  summarize(density = mean(density, na.rm = T)) %>% 
-  mutate(method = "nSPC_BLT_TOW")
-
-df = rbind(df, df_calibr)
-
-save(df, file = paste0("output/calibr_df/calibr_", species, "_", var, ".RData"))
 load(paste0("output/calibr_df/calibr_", species, "_", var, ".RData"))
 
 if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~"")
@@ -124,7 +140,7 @@ df %>%
 ggsave(last_plot(),file = paste0("output/plot/calibr_", species, "_map_b_", var, ".pdf"), height = 5, width = 7)
 
 df %>% 
-  filter(region %in% c("MHI")) %>% 
+  filter(region %in% c("MHI")) %>%
   mutate(longitude = round(longitude, 1), 
          latitude = round(latitude, 1)) %>% 
   group_by(method, longitude, latitude, year) %>%
@@ -165,7 +181,7 @@ df %>%
 ggsave(last_plot(),file = paste0("output/plot/calibr_", species, "_depth_", var, ".pdf"), height = 5, width = 10)
 
 df %>%
-  # filter(method != "nSPC_BLT_TOW") %>%
+  filter(method != "nSPC_BLT_TOW") %>%
   mutate(YEAR = format(date_, "%Y")) %>% 
   group_by(year, method, region) %>%
   summarise(mean_density = mean(density), se_density = sd(density)/sqrt(n())) %>%
@@ -181,10 +197,10 @@ df %>%
   facet_wrap(~region, scales = "free_y") +
   scale_x_discrete(limits = unique(df$year)) + # Add this line
   theme(legend.position = c(0.85, 0.25), 
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
-    legend.key = element_rect(colour = NA, fill = NA),
-    legend.background = element_rect(fill = "transparent", colour = NA),
-    legend.box.background = element_rect(fill = "transparent", colour = NA))
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        legend.key = element_rect(colour = NA, fill = NA),
+        legend.background = element_rect(fill = "transparent", colour = NA),
+        legend.box.background = element_rect(fill = "transparent", colour = NA))
 
 ggsave(last_plot(),file = paste0("output/plot/calibr_", species, "_ts_a_", var, ".pdf"), height = 5, width = 10)
 

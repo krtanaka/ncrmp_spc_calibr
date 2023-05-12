@@ -24,7 +24,7 @@ rm(list = ls())
 # OPUE: Obervation Per Unit Effort obtained by multiplying prob. of sighting and abundance (PRES x POS) in provided data set.
 # OPUE.CAL: Obervation Per Unit Effort obtained by multiplying calibrated prob. of sighting and abundance (PRES.CAL x POS.CAL) in provided data set.
 
-folders <- list.dirs(path = "output", full.names = TRUE, recursive = FALSE)
+folders <- list.dirs(path = "output", full.names = T, recursive = F)
 
 read_summary_table <- function(folder_path) {
   file_path <- file.path(folder_path, "summary_table.csv")
