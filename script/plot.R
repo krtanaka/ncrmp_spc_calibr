@@ -244,5 +244,3 @@ for (s in 1:length(species)) {
   ggsave(last_plot(),file = paste0("output/plot/calibr_", species[s], "_ts_c_", var, ".pdf"), height = 10, width = 20)
   
 }
-
-
