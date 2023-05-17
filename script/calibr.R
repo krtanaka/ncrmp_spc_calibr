@@ -13,7 +13,7 @@ model = c("GLM", "GLMM")
 spc_calibr = function(var, region, model){
   
   # var = "abund"
-  # region = "MARIAN"
+  # region = "MHI"
   # model = "GLM"
   
   belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>% 

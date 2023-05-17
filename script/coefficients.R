@@ -41,7 +41,7 @@ read_summary_table <- function(folder_path) {
 df_list <- lapply(folders, read_summary_table)
 names(df_list) <- basename(folders)
 
-species = c("APVI", "ACLI", "CAME", "MOGR", "NALI", "SCSC", "LUFU")
+species = c("APVI", "ACLI", "ACNC", "CAME", "MOGR", "NALI", "SCSC", "LUFU")
 
 for (s in 1:length(species)) {
   

@@ -14,7 +14,7 @@ species = c("APVI", "ACLI", "CAME", "MOGR", "NALI", "SCSC", "LUFU")
 
 for (s in 1:length(species)) {
   
-  # s = 1
+  # s = 3
   
   df = NULL
   
