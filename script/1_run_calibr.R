@@ -2,6 +2,7 @@
 # library(devtools)
 # install_github("marcnadon/Calibr")
 
+# # Marc's example
 # SET <- SMALL_UNPAIR
 # results <- run_calibr(SET,std_method="nSPC",stat_model="GLM")
 # export_results(results)
