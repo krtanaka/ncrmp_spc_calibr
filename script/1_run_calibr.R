@@ -32,8 +32,8 @@ spc_calibr = function(var, region, model){
     group_by_at(vars(-n.transect)) %>%
     summarise(DENSITY = mean(DENSITY),
               PRESENCE = mean(PRESENCE), .groups = "drop") %>% 
-    mutate(#BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
-           BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+    mutate(BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+           #BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
            GROUP = SPECIES) %>% 
     na.omit() %>% 
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
@@ -42,8 +42,8 @@ spc_calibr = function(var, region, model){
     group_by_at(vars(-SIZE_10cm)) %>%
     summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>% 
     mutate(PRESENCE = as.integer(DENSITY > 0),
-           #BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
-           BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+           BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+           #BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
            GROUP = SPECIES) %>% 
     na.omit() %>% 
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
@@ -60,8 +60,8 @@ spc_calibr = function(var, region, model){
     group_by_at(vars(-SIZE_10cm)) %>%
     summarise(DENSITY = sum(!!sym(paste0(var, ".segment"))), .groups = "drop") %>% 
     mutate(PRESENCE = as.integer(DENSITY > 0),
-           #BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
-           BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+           BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+           #BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
            GROUP = SPECIES) %>% 
     na.omit() %>% 
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
@@ -70,7 +70,7 @@ spc_calibr = function(var, region, model){
   
   for (c in 1:length(calibr)) {
     
-    # c = 2
+    # c = 1
     
     if (calibr[c] == "spc_belt") set = rbind(spc, belt)
     if (calibr[c] == "spc_tow") set = rbind(spc, tow)
