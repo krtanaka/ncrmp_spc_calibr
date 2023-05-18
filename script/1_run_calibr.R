@@ -1,3 +1,7 @@
+# install.packages("devtools")
+# library(devtools)
+# install_github("marcnadon/Calibr")
+
 require(data.table) 
 require(Calibr)
 library(dplyr)
