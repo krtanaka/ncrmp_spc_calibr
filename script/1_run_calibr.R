@@ -26,25 +26,30 @@ spc_calibr = function(var, region, model){
   # model = "GLM"
   
   belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>% 
-    group_by(ISLAND, DEPTH_BIN, REEF_ZONE, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
+    group_by_at(vars(-SIZE_10cm)) %>%
     summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>% 
-    na.omit() %>% 
-    mutate(PRESENCE = as.integer(DENSITY > 0),
-           BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+    mutate(PRESENCE = as.integer(DENSITY > 0)) %>% 
+    group_by_at(vars(-n.transect)) %>%
+    summarise(DENSITY = mean(DENSITY),
+              PRESENCE = mean(PRESENCE), .groups = "drop") %>% 
+    mutate(#BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+           BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
            GROUP = SPECIES) %>% 
+    na.omit() %>% 
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
   
   spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region, ".rds")) %>% 
-    group_by(ISLAND, DEPTH_BIN, REEF_ZONE, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
+    group_by_at(vars(-SIZE_10cm)) %>%
     summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>% 
-    na.omit() %>% 
     mutate(PRESENCE = as.integer(DENSITY > 0),
-           BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+           #BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+           BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
            GROUP = SPECIES) %>% 
+    na.omit() %>% 
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
   
   tow = readRDS(paste0("data/tow.segment.", var, ".size.20002017.", region, ".rds")) %>% 
-    subset(CENTROIDLON != 0) %>%
+    subset(CENTROIDLON != 0 & SIZE_10cm != "(40,50]") %>%
     mutate(DEPTH_BIN = case_when(
       DEPTH >= 0  & DEPTH <= 6 ~ "Shallow",
       DEPTH > 6  & DEPTH <= 18 ~ "Mid",
@@ -52,12 +57,13 @@ spc_calibr = function(var, region, model){
       TRUE ~ ""),
       LONGITUDE = CENTROIDLON,
       LATITUDE = CENTROIDLAT) %>% 
-    group_by(ISLAND, DEPTH_BIN, REEF_ZONE, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
+    group_by_at(vars(-SIZE_10cm)) %>%
     summarise(DENSITY = sum(!!sym(paste0(var, ".segment"))), .groups = "drop") %>% 
-    na.omit() %>% 
     mutate(PRESENCE = as.integer(DENSITY > 0),
-           BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
-           GROUP = SPECIES)  %>% 
+           #BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+           BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+           GROUP = SPECIES) %>% 
+    na.omit() %>% 
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
   
   calibr = c("spc_belt", "spc_tow")
