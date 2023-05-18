@@ -2,6 +2,10 @@
 # library(devtools)
 # install_github("marcnadon/Calibr")
 
+# SET <- SMALL_UNPAIR
+# results <- run_calibr(SET,std_method="nSPC",stat_model="GLM")
+# export_results(results)
+
 require(data.table) 
 require(Calibr)
 library(dplyr)
