@@ -22,8 +22,8 @@ rm(list = ls())
 # PRES.CAL: Calibrated probability of observing a species by method (used as a check on the success of the standardization procedure).
 # POS: Abundance of a specific species for each method.
 # POS.CAL: Calibrated abundance of a specific species for each method (used as a check on the success of the standardization procedure).
-# OPUE: Obervation Per Unit Effort obtained by multiplying prob. of sighting and abundance (PRES x POS) in provided data set.
-# OPUE.CAL: Obervation Per Unit Effort obtained by multiplying calibrated prob. of sighting and abundance (PRES.CAL x POS.CAL) in provided data set.
+# OPUE: Observation Per Unit Effort obtained by multiplying prob. of sighting and abundance (PRES x POS) in provided data set.
+# OPUE.CAL: Observation Per Unit Effort obtained by multiplying calibrated prob. of sighting and abundance (PRES.CAL x POS.CAL) in provided data set.
 
 folders <- list.dirs(path = "output", full.names = T, recursive = F)
 
