@@ -26,26 +26,27 @@ spc_calibr = function(var, region, model){
   # model = "GLM"
   
   belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>% 
-    group_by_at(vars(-SIZE_10cm)) %>%
-    summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>% 
+    group_by(SITEVISITID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_, n.transect) %>% # aggregate size bins
+    summarise(DENSITY = sum(!!sym(paste0(var, ".site")))) %>% 
     mutate(PRESENCE = as.integer(DENSITY > 0)) %>% 
-    group_by_at(vars(-n.transect)) %>%
-    summarise(DENSITY = mean(DENSITY),
-              PRESENCE = mean(PRESENCE), .groups = "drop") %>% 
+    group_by(SITEVISITID) %>%
+    mutate(unique_transect_count = n_distinct(n.transect)) %>%
+    mutate(DENSITY = DENSITY/unique_transect_count,
+           PRESENCE = PRESENCE/unique_transect_count) %>% 
     mutate(BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
            #BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
            GROUP = SPECIES) %>% 
-    na.omit() %>% 
+    ungroup() %>% 
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
   
   spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region, ".rds")) %>% 
-    group_by_at(vars(-SIZE_10cm)) %>%
-    summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>% 
-    mutate(PRESENCE = as.integer(DENSITY > 0),
-           BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+    group_by(SITEVISITID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_) %>% # aggregate size bins
+    summarise(DENSITY = sum(!!sym(paste0(var, ".site")))) %>% 
+    mutate(PRESENCE = as.integer(DENSITY > 0)) %>% 
+    mutate(BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
            #BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
            GROUP = SPECIES) %>% 
-    na.omit() %>% 
+    ungroup() %>% 
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
   
   tow = readRDS(paste0("data/tow.segment.", var, ".size.20002017.", region, ".rds")) %>% 
@@ -57,13 +58,18 @@ spc_calibr = function(var, region, model){
       TRUE ~ ""),
       LONGITUDE = CENTROIDLON,
       LATITUDE = CENTROIDLAT) %>% 
-    group_by_at(vars(-SIZE_10cm)) %>%
-    summarise(DENSITY = sum(!!sym(paste0(var, ".segment"))), .groups = "drop") %>% 
-    mutate(PRESENCE = as.integer(DENSITY > 0),
-           BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+    group_by(TOWID, SEGMENTID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_) %>% #aggregate size bins
+    summarise(DENSITY = sum(!!sym(paste0(var, ".segment")))) %>% 
+    mutate(PRESENCE = as.integer(DENSITY > 0)) %>% 
+    group_by(TOWID) %>%
+    mutate(unique_segment_count = n_distinct(SEGMENTID)) %>% 
+    group_by(TOWID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_) %>% # average by unique_segment_count
+    summarise(DENSITY = DENSITY/unique_segment_count,
+              PRESENCE = PRESENCE/unique_segment_count) %>% 
+    mutate(BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
            #BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
            GROUP = SPECIES) %>% 
-    na.omit() %>% 
+    ungroup() %>% 
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
   
   calibr = c("spc_belt", "spc_tow")
