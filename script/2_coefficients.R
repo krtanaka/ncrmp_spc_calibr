@@ -45,7 +45,7 @@ species = c("APVI", "ACLI", "ACNC", "CAME", "MOGR", "NALI", "SCSC", "LUFU")
 
 for (s in 1:length(species)) {
   
-  s = 1
+  # s = 1
   
   p1 <- bind_rows(df_list, .id = "folder")  %>% 
     separate(folder, into = c("spc", "belt_tow", "var", "region", "model"), sep = "_") %>%
@@ -75,5 +75,6 @@ for (s in 1:length(species)) {
   p1 / p2
   
   ggsave(last_plot(),file = paste0("output/plot/coef_", species[s], ".pdf"), height = 10, width = 10)
-  
+  # ggsave(last_plot(),file = paste0("output/plot/coef_", species[s], ".png"), height = 10, width = 10, units = "in")
+
 }
