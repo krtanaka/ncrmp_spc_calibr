@@ -45,6 +45,8 @@ species = c("APVI", "ACLI", "ACNC", "CAME", "MOGR", "NALI", "SCSC", "LUFU")
 
 for (s in 1:length(species)) {
   
+  s = 1
+  
   p1 <- bind_rows(df_list, .id = "folder")  %>% 
     separate(folder, into = c("spc", "belt_tow", "var", "region", "model"), sep = "_") %>%
     rename_all(tolower) %>% 
