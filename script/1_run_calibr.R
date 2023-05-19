@@ -50,7 +50,7 @@ spc_calibr = function(var, region, model){
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
   
   tow = readRDS(paste0("data/tow.segment.", var, ".size.20002017.", region, ".rds")) %>% 
-    subset(CENTROIDLON != 0 & SIZE_10cm != "(40,50]") %>%
+    subset(CENTROIDLON != 0 & SIZE_10cm != "(40,50]") %>% # remove size bins < 50 cm
     mutate(DEPTH_BIN = case_when(
       DEPTH >= 0  & DEPTH <= 6 ~ "Shallow",
       DEPTH > 6  & DEPTH <= 18 ~ "Mid",
@@ -58,7 +58,7 @@ spc_calibr = function(var, region, model){
       TRUE ~ ""),
       LONGITUDE = CENTROIDLON,
       LATITUDE = CENTROIDLAT) %>% 
-    group_by(TOWID, SEGMENTID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_) %>% #aggregate size bins
+    group_by(TOWID, SEGMENTID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_) %>% # aggregate size bins
     summarise(DENSITY = sum(!!sym(paste0(var, ".segment")))) %>% 
     mutate(PRESENCE = as.integer(DENSITY > 0)) %>% 
     ungroup() %>% 
