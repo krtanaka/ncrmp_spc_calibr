@@ -8,7 +8,7 @@ library(ggh4x)
 
 rm(list = ls())
 
-var = c("abund", "biom")[2]
+var = c("abund", "biom")[1]
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[c(1, 3)]
 species = c("APVI", "ACLI", "CAME", "MOGR", "NALI", "SCSC", "LUFU", "LUKA")[7:8]
 
@@ -23,11 +23,11 @@ for (s in 1:length(species)) {
     # r = 1
     
     calibr_belt = read_csv(paste0("output/spc_belt_", var, "_", region[r], "_GLMM/summary_table.csv")) %>% 
-      filter(GROUP == species[s]) %>% 
+      filter(GROUP == species[s]) %>%
       filter(METHOD != "1_nSPC")
     
     calibr_tow = read_csv(paste0("output/spc_tow_", var, "_", region[r], "_GLMM/summary_table.csv")) %>% 
-      filter(GROUP == species[s]) %>% 
+      filter(GROUP == species[s]) %>%
       filter(METHOD != "1_nSPC")
     
     calibr_tow_pres = calibr_tow$PRES.GCF
@@ -53,7 +53,7 @@ for (s in 1:length(species)) {
              DENSITY = DENSITY / calibr_belt_pos)
     
     spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region[r], ".rds"))  %>% 
-      filter(SPECIES == species[s]) %>% 
+      filter(SPECIES == species[s]) %>%
       group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
       summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>%
       mutate(PRESENCE = as.integer(DENSITY > 0)) 
