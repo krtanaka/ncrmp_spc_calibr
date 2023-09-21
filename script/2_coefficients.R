@@ -41,7 +41,16 @@ read_summary_table <- function(folder_path) {
 df_list <- lapply(folders, read_summary_table)
 names(df_list) <- basename(folders)
 
-species = c("APVI", "ACLI", "ACNC", "CAME", "MOGR", "NALI", "SCSC", "LUFU", "LUKA")
+species = c(
+  # "APVI",
+  # "ACLI", 
+  # "ACNC", 
+  # "CAME", 
+  # "MOGR", 
+  # "NALI", 
+  # "SCSC",
+  "LUFU", 
+  "LUKA")
 
 for (s in 1:length(species)) {
   
@@ -75,6 +84,6 @@ for (s in 1:length(species)) {
   p1 / p2
   
   ggsave(last_plot(),file = paste0("output/plot/coef_", species[s], ".pdf"), height = 10, width = 10)
-  # ggsave(last_plot(),file = paste0("output/plot/coef_", species[s], ".png"), height = 10, width = 10, units = "in")
-
+  ggsave(last_plot(),file = paste0("output/plot/coef_", species[s], ".png"), height = 10, width = 10, units = "in")
+  
 }

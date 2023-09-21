@@ -8,13 +8,13 @@ library(ggh4x)
 
 rm(list = ls())
 
-var = c("abund", "biom")[1]
+var = c("abund", "biom")[2]
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[c(1, 3)]
 species = c("APVI", "ACLI", "CAME", "MOGR", "NALI", "SCSC", "LUFU", "LUKA")[7:8]
 
 for (s in 1:length(species)) {
   
-  # s = 3
+  # s = 1
   
   df = NULL
   
@@ -93,17 +93,23 @@ for (s in 1:length(species)) {
   if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~"")
   
   df %>% 
-    mutate(longitude = round(longitude, 1), 
-           latitude = round(latitude, 1)) %>% 
+    filter(density > 0) %>%
+    # mutate(longitude = round(longitude, 1), 
+    #        latitude = round(latitude, 1)) %>% 
+    mutate(longitude = round(longitude / 0.5) * 0.5,
+           latitude = round(latitude / 0.5) * 0.5) %>%
     group_by(method, longitude, latitude) %>%
     summarise(density = mean(density)) %>%
     ggplot(aes(longitude, latitude)) + 
     geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.5) +
-    scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
+    scale_fill_gradientn(colours = matlab.like(100), guide = "legend") +
     facet_grid(~ method) +
     ggtitle(paste0(species[s], ": ", min(df$year), "-", max(df$year))) + 
-    # labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
-    # y = expression(paste("Latitude ", degree, "N", sep = ""))) +
+    geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)), 
+                 aes(x = long, y = lat, group = group)) + 
+    coord_equal(xlim = range(df$longitude), ylim = range(df$latitude)) +
+    labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
+    y = expression(paste("Latitude ", degree, "N", sep = ""))) +
     guides(color = guide_legend(unit), 
            fill = guide_legend(unit),
            size = guide_legend(unit)) + 
@@ -113,40 +119,35 @@ for (s in 1:length(species)) {
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, ".pdf"), height = 5, width = 12)
+  ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, ".png"), height = 5, width = 12, units = "in")
   
   df %>% 
+    filter(density > 0) %>%
     filter(method == "nSPC_BLT_TOW") %>%
-    mutate(longitude = round(longitude, 1), 
-           latitude = round(latitude, 1)) %>% 
+    mutate(longitude = round(longitude, 1),
+           latitude = round(latitude, 1)) %>%
     group_by(longitude, latitude, region) %>%
     summarise(density = mean(density)) %>%
     ggplot(aes(longitude, latitude)) + 
     geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.7) +
     scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
     ggtitle(paste0(species[s], ": ", min(df$year), "-", max(df$year))) + 
+    geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)), 
+                 aes(x = long, y = lat, group = group)) + 
+    coord_equal(xlim = range(df$longitude), ylim = range(df$latitude)) +
     guides(color = guide_legend(unit), 
            fill = guide_legend(unit),
            size = guide_legend(unit)) + 
-    coord_fixed() + 
     theme(legend.position = c(0.18, 0.2),
           legend.key = element_rect(colour = NA, fill = NA),
           legend.background = element_rect(fill = "transparent", colour = NA),
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, ".pdf"), height = 5, width = 7)
-  
-  if (species[s] == "APVI") {
-    
-    region_i = c("MHI")
-    
-  } else {
-    
-    region_i = c("MARIAN")
-    
-  }
+  ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, ".pdf"), height = 5, width = 7, units = "in")
   
   df %>% 
-    filter(region %in% region_i) %>%
+    filter(density > 0) %>%
     mutate(longitude = round(longitude, 1), 
            latitude = round(latitude, 1)) %>% 
     group_by(method, longitude, latitude, year) %>%
@@ -167,8 +168,10 @@ for (s in 1:length(species)) {
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   ggsave(last_plot(),file = paste0("output/plot/map_c_", species[s], "_", var, ".pdf"),height = 7, width = 12)
+  ggsave(last_plot(),file = paste0("output/plot/map_c_", species[s], "_", var, ".pdf"),height = 7, width = 12, units = "in")
   
   df %>% 
+    filter(density > 0) %>%
     filter(method == "nSPC_BLT_TOW") %>%
     mutate(depth = round(depth, 1)) %>%
     group_by(method, region, depth) %>%
@@ -185,6 +188,7 @@ for (s in 1:length(species)) {
            size = guide_legend(unit))
   
   ggsave(last_plot(),file = paste0("output/plot/depth_", species[s], "_", var, ".pdf"), height = 5, width = 10)
+  ggsave(last_plot(),file = paste0("output/plot/depth_", species[s], "_", var, ".pdf"), height = 5, width = 10, units = "in")
   
   df %>%
     filter(method != "nSPC_BLT_TOW") %>%
@@ -209,6 +213,7 @@ for (s in 1:length(species)) {
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   ggsave(last_plot(),file = paste0("output/plot/ts_a_", species[s], "_", var, ".pdf"), height = 5, width = 10)
+  ggsave(last_plot(),file = paste0("output/plot/ts_a_", species[s], "_", var, ".pdf"), height = 5, width = 10, units = "in")
   
   df %>%
     filter(method != "nSPC_BLT_TOW") %>%
@@ -229,6 +234,7 @@ for (s in 1:length(species)) {
           axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   
   ggsave(last_plot(),file = paste0("output/plot/ts_b_", species[s], "_", var, ".pdf"), height = 5, width = 10)
+  ggsave(last_plot(),file = paste0("output/plot/ts_b_", species[s], "_", var, ".pdf"), height = 5, width = 10, units = "in")
   
   df %>%
     filter(method != "nSPC_BLT_TOW") %>% 
@@ -250,5 +256,6 @@ for (s in 1:length(species)) {
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   
   ggsave(last_plot(),file = paste0("output/plot/ts_c_", species[s], "_", var, ".pdf"), height = 10, width = 20)
+  ggsave(last_plot(),file = paste0("output/plot/ts_c_", species[s], "_", var, ".pdf"), height = 10, width = 20, units = "in")
   
 }
