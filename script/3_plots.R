@@ -9,8 +9,8 @@ library(ggh4x)
 rm(list = ls())
 
 var = c("abund", "biom")[1]
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
-species = c("APVI", "ACLI", "CAME", "MOGR", "NALI", "SCSC", "LUFU", "LUKA")
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[c(1, 3)]
+species = c("APVI", "ACLI", "CAME", "MOGR", "NALI", "SCSC", "LUFU", "LUKA")[7:8]
 
 for (s in 1:length(species)) {
   
