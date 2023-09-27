@@ -85,7 +85,7 @@ spc_calibr = function(var, region, model){
     if (calibr[c] == "spc_belt") set = rbind(spc, belt)
     if (calibr[c] == "spc_tow") set = rbind(spc, tow)
     
-    set$REP <- sprintf("%04d", as.numeric(factor(paste(set$LATITUDE, set$LONGITUDE, set$DATE_, sep="_"))))
+    set$REP <- sprintf("%04d", as.numeric(factor(paste(set$LATITUDE, set$LONGITUDE, set$DATE_, sep = "_"))))
     set$REP = as.integer(set$REP)
     set = set[,c("BLOCK", "REP", "GROUP", "METHOD", "DENSITY", "PRESENCE")]
     set[] <- lapply(set, trimws)
