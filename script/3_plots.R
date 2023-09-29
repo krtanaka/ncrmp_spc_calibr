@@ -10,16 +10,20 @@ rm(list = ls())
 
 var = c("abund", "biom")[1]
 
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[c(1,3)]
 
-species = c("APVI",
-            "ACLI",
-            "CAME",
-            "MOGR",
-            "NALI",
-            "SCSC",
-            "LUFU",
-            "LUKA")
+species = c(
+  # "APVI",
+  # "ACLI", 
+  # "ACNC", 
+  # "CAME", 
+  # "MOGR", 
+  # "NALI", 
+  # "SCSC",
+  "LUFU",
+  "LUKA")
+  # "CHUN",
+  # "BOMU")
 
 for (s in 1:length(species)) {
   
@@ -68,8 +72,8 @@ for (s in 1:length(species)) {
              LATITUDE = CENTROIDLAT) %>% 
       group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
       summarise(DENSITY = sum(!!sym(paste0(var, ".segment"))), .groups = "drop") %>% 
-      mutate(PRESENCE = inv.logit(logit(DENSITY > 0 - calibr_belt_pres)),
-             DENSITY = DENSITY / calibr_belt_pos)
+      mutate(PRESENCE = inv.logit(logit(DENSITY > 0 - calibr_tow_pres)),
+             DENSITY = DENSITY / calibr_tow_pos)
     
     if (dim(tow)[1] == 0) {
       
@@ -131,14 +135,12 @@ for (s in 1:length(species)) {
   
   save(df, file = paste0("output/calibr_df/calibr_", species[s], "_", var, ".RData"))
   
-  if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~"")
-  if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~"")
-  
   if(var == "abund") unit = expression("Individuals (n) per 2.4" ~ km^2~"")
   if(var == "biom") unit = expression("Biomass (g) per 2.4" ~ km^2~"")
   
   df %>% 
-    filter(density > 0) %>%
+    # filter(density > 0) %>%
+    filter(method != "nSPC_BLT_TOW") %>%
     mutate(longitude = round(longitude, 1),
            latitude = round(latitude, 1)) %>%
     # mutate(longitude = round(longitude / 0.5) * 0.5,
@@ -152,7 +154,7 @@ for (s in 1:length(species)) {
     scale_fill_gradientn(colours = matlab.like(100), guide = "legend") +
     facet_wrap(~ method) +
     ggtitle(paste0(species[s], ": ", min(df$year), "-", max(df$year)),
-            subtitle = paste0("Maximum density per 100 sq.m : ", round(max(df$density), 1))) + 
+            subtitle = paste0("Maximum observation per 100 sq.m = ", round(max(df$density), 1))) + 
     coord_equal(xlim = range(df$longitude), ylim = range(df$latitude)) +
     labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
          y = expression(paste("Latitude ", degree, "N", sep = ""))) +
@@ -165,10 +167,10 @@ for (s in 1:length(species)) {
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   # ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, ".pdf"), height = 8, width = 16)
-  ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, ".png"), height = 8, width = 16, units = "in")
+  ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, ".png"), height = 6, width = 18, units = "in")
   
   df %>% 
-    # filter(density > 0) %>%
+    filter(density > 0) %>%
     filter(method == "nSPC_BLT_TOW") %>%
     mutate(longitude = round(longitude, 1),
            latitude = round(latitude, 1)) %>%
@@ -177,13 +179,14 @@ for (s in 1:length(species)) {
     group_by(longitude, latitude, region) %>%
     summarise(density = mean(density)) %>%
     ggplot(aes(longitude, latitude)) + 
-    # geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)),
-    #              aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group)) +
+    geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)), aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group)) +
     geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.5) +
     scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
     ggtitle(paste0(species[s], ": ", min(df$year), "-", max(df$year)),
-            subtitle = paste0("Maximum density per 100 sq.m : ", round(max(df$density), 1))) + 
+            subtitle = paste0("Maximum observation per 100 sq.m = ", round(max(df$density), 1))) + 
     coord_equal(xlim = range(df$longitude), ylim = range(df$latitude)) +
+    labs(x = expression(paste("Longitude ", degree, "", sep = "")),
+         y = expression(paste("Latitude ", degree, "", sep = ""))) +
     guides(color = guide_legend(unit), 
            fill = guide_legend(unit),
            size = guide_legend(unit)) + 
@@ -193,7 +196,7 @@ for (s in 1:length(species)) {
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   # ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, ".pdf"), height = 8, width = 16)
-  ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, ".png"), height = 5, width = 15, units = "in")
+  ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, ".png"), height = 6, width = 8, units = "in")
   
   df %>% 
     # filter(density > 0) %>%
@@ -220,12 +223,15 @@ for (s in 1:length(species)) {
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   # ggsave(last_plot(),file = paste0("output/plot/map_c_", species[s], "_", var, ".pdf"),height = 10, width = 30)
-  ggsave(last_plot(),file = paste0("output/plot/map_c_", species[s], "_", var, ".png"),height = 7, width = 21, units = "in")
+  ggsave(last_plot(),file = paste0("output/plot/map_c_", species[s], "_", var, ".png"),height = 7, width = 28, units = "in")
   
-  df %>% 
+  if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~"")
+  if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~"")
+  
+  df %>%
     # filter(density > 0) %>%
     filter(method == "nSPC_BLT_TOW") %>%
-    mutate(depth = round(depth, 1)) %>%
+    # mutate(depth = round(depth, 1)) %>%
     group_by(method, region, depth) %>%
     summarise(density = mean(density, na.rm = T)) %>%
     ggplot(aes(depth, density)) + 
@@ -273,8 +279,8 @@ for (s in 1:length(species)) {
     mutate(YEAR = format(date_, "%Y")) %>% 
     group_by(year, region) %>%
     summarise(mean_density = mean(density), se_density = sd(density)/sqrt(n())) %>%
-    mutate(mean_density = ifelse(mean_density == 0, NA, mean_density),
-           se_density = ifelse(se_density == 0, NA, se_density)) %>%
+    # mutate(mean_density = ifelse(mean_density == 0, NA, mean_density),
+           # se_density = ifelse(se_density == 0, NA, se_density)) %>%
     ggplot(aes(x = year, y = mean_density, fill = mean_density)) +
     geom_errorbar(aes(ymin = mean_density - se_density, ymax = mean_density + se_density), width = 0, show.legend = F) +
     geom_point(size = 3, shape = 21, show.legend = F) +
@@ -294,8 +300,8 @@ for (s in 1:length(species)) {
     mutate(YEAR = format(date_, "%Y")) %>% 
     group_by(year, island) %>%
     summarise(mean_density = mean(density), se_density = sd(density)/sqrt(n())) %>%
-    mutate(mean_density = ifelse(mean_density == 0, NA, mean_density),
-           se_density = ifelse(se_density == 0, NA, se_density)) %>%
+    # mutate(mean_density = ifelse(mean_density == 0, NA, mean_density),
+           # se_density = ifelse(se_density == 0, NA, se_density)) %>%
     na.omit() 
   
   dfi %>%
@@ -311,6 +317,6 @@ for (s in 1:length(species)) {
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   
   # ggsave(last_plot(),file = paste0("output/plot/ts_c_", species[s], "_", var, ".pdf"), height = 5, width = 10)
-  ggsave(last_plot(),file = paste0("output/plot/ts_c_", species[s], "_", var, ".png"), height = 10, width = 15, units = "in")
+  ggsave(last_plot(),file = paste0("output/plot/ts_c_", species[s], "_", var, ".png"), height = 10, width = 20, units = "in")
   
 }
