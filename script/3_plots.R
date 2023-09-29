@@ -8,20 +8,20 @@ library(ggh4x)
 
 rm(list = ls())
 
-var = c("abund", "biom")[1]
+var = c("abund", "biom")[2]
 
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[c(1,3)]
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
 
 species = c(
-  # "APVI",
+  "APVI")
   # "ACLI", 
   # "ACNC", 
   # "CAME", 
   # "MOGR", 
   # "NALI", 
   # "SCSC",
-  "LUFU",
-  "LUKA")
+  # "LUFU",
+  # "LUKA")
   # "CHUN",
   # "BOMU")
 
@@ -231,7 +231,7 @@ for (s in 1:length(species)) {
   df %>%
     # filter(density > 0) %>%
     filter(method == "nSPC_BLT_TOW") %>%
-    # mutate(depth = round(depth, 1)) %>%
+    mutate(depth = round(depth, 1)) %>%
     group_by(method, region, depth) %>%
     summarise(density = mean(density, na.rm = T)) %>%
     ggplot(aes(depth, density)) + 
