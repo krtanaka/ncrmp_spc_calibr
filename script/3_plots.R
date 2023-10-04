@@ -8,22 +8,22 @@ library(ggh4x)
 
 rm(list = ls())
 
-var = c("abund", "biom")[2]
+var = c("abund", "biom")[1]
 
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
 
 species = c(
-  "APVI")
-  # "ACLI", 
-  # "ACNC", 
-  # "CAME", 
-  # "MOGR", 
-  # "NALI", 
-  # "SCSC",
-  # "LUFU",
-  # "LUKA")
-  # "CHUN",
-  # "BOMU")
+  "APVI",
+  "ACLI",
+  "ACNC",
+  "CAME",
+  "MOGR",
+  "NALI",
+  "SCSC",
+  "LUFU",
+  "LUKA",
+  "CHUN",
+  "BOMU")
 
 for (s in 1:length(species)) {
   
@@ -200,10 +200,10 @@ for (s in 1:length(species)) {
   
   df %>% 
     # filter(density > 0) %>%
-    # mutate(longitude = round(longitude, 1),
-    # latitude = round(latitude, 1)) %>%
-    mutate(longitude = round(longitude / 0.5) * 0.5,
-           latitude = round(latitude / 0.5) * 0.5) %>%
+    mutate(longitude = round(longitude, 1),
+           latitude = round(latitude, 1)) %>%
+    # mutate(longitude = round(longitude / 0.5) * 0.5,
+    # latitude = round(latitude / 0.5) * 0.5) %>%
     group_by(method, longitude, latitude, year) %>%
     summarise(density = mean(density)) %>%
     ggplot(aes(longitude, latitude)) + 
@@ -280,7 +280,7 @@ for (s in 1:length(species)) {
     group_by(year, region) %>%
     summarise(mean_density = mean(density), se_density = sd(density)/sqrt(n())) %>%
     # mutate(mean_density = ifelse(mean_density == 0, NA, mean_density),
-           # se_density = ifelse(se_density == 0, NA, se_density)) %>%
+    # se_density = ifelse(se_density == 0, NA, se_density)) %>%
     ggplot(aes(x = year, y = mean_density, fill = mean_density)) +
     geom_errorbar(aes(ymin = mean_density - se_density, ymax = mean_density + se_density), width = 0, show.legend = F) +
     geom_point(size = 3, shape = 21, show.legend = F) +
@@ -301,7 +301,7 @@ for (s in 1:length(species)) {
     group_by(year, island) %>%
     summarise(mean_density = mean(density), se_density = sd(density)/sqrt(n())) %>%
     # mutate(mean_density = ifelse(mean_density == 0, NA, mean_density),
-           # se_density = ifelse(se_density == 0, NA, se_density)) %>%
+    # se_density = ifelse(se_density == 0, NA, se_density)) %>%
     na.omit() 
   
   dfi %>%
