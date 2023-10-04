@@ -8,7 +8,7 @@ library(ggh4x)
 
 rm(list = ls())
 
-var = c("abund", "biom")[1]
+var = c("abund", "biom")[2]
 
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
 
