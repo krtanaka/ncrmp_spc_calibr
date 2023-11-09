@@ -53,7 +53,7 @@ for (s in 1:length(species)) {
       filter(SPECIES == species[s]) %>%
       group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>%
       summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>%
-      mutate(PRESENCE = inv.logit(logit(DENSITY > 0 - calibr_belt_pres)),
+      mutate(PRESENCE = inv.logit(logit(DENSITY > 0) - calibr_belt_pres),
              DENSITY = DENSITY / calibr_belt_pos)
     
     if (dim(belt)[1] == 0) {
@@ -72,7 +72,7 @@ for (s in 1:length(species)) {
              LATITUDE = CENTROIDLAT) %>% 
       group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>% 
       summarise(DENSITY = sum(!!sym(paste0(var, ".segment"))), .groups = "drop") %>% 
-      mutate(PRESENCE = inv.logit(logit(DENSITY > 0 - calibr_tow_pres)),
+      mutate(PRESENCE = inv.logit(logit(DENSITY > 0) - calibr_tow_pres),
              DENSITY = DENSITY / calibr_tow_pos)
     
     if (dim(tow)[1] == 0) {
