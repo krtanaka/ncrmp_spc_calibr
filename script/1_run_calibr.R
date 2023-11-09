@@ -21,12 +21,12 @@ model = c("GLM", "GLMM")
 
 spc_calibr = function(var, region, model){
   
-  # var = "abund"
-  # region = "MHI"
-  # model = "GLM"
+  var = "abund"
+  region = "MHI"
+  model = "GLM"
   
-  belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>% 
-    group_by(SITEVISITID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_, n.transect) %>% # aggregate size bins
+  belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>%
+    group_by(SITEVISITID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_, n.transect) %>% # aggregate size bins, also filter out 10-20cm
     summarise(DENSITY = sum(!!sym(paste0(var, ".site")))) %>% 
     mutate(PRESENCE = as.integer(DENSITY > 0)) %>% 
     # group_by(SITEVISITID) %>%
@@ -80,7 +80,7 @@ spc_calibr = function(var, region, model){
   
   for (c in 1:length(calibr)) {
     
-    # c = 1
+    # c = 2
     
     if (calibr[c] == "spc_belt") set = rbind(spc, belt)
     if (calibr[c] == "spc_tow") set = rbind(spc, tow)
