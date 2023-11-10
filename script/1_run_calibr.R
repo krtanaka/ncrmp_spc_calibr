@@ -26,6 +26,7 @@ spc_calibr = function(var, region, model){
   model = "GLM"
   
   belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>%
+    filter(SIZE_10cm != "(0,10]" & SIZE_10cm != "(10,20]") %>%
     group_by(SITEVISITID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_, n.transect) %>% # aggregate size bins, also filter out 10-20cm
     summarise(DENSITY = sum(!!sym(paste0(var, ".site")))) %>% 
     mutate(PRESENCE = as.integer(DENSITY > 0)) %>% 
