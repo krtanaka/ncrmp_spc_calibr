@@ -9,6 +9,7 @@ library(patchwork)
 rm(list = ls())
 
 # METHOD: Sampling method used.
+
 # GCF.PRES: Gear calibration factor for presence-absence data.
 
 # Convert probability of observation of secondary method following this equation: 
