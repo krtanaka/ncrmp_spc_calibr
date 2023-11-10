@@ -15,15 +15,11 @@ library(ggplot2)
 
 rm(list = ls())
 
-var = c("abund", "biom")
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
-model = c("GLM", "GLMM")
-
 spc_calibr = function(var, region, model){
 
-  # var = "abund"
-  # region = "MHI"
-  # model = "GLM"
+  var = c("abund", "biom")[1]
+  region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
+  model = c("GLM", "GLMM")[1]
   
   # belt transect data
   belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>%
@@ -103,8 +99,7 @@ spc_calibr = function(var, region, model){
     export_results(results, outdir = paste0("output/", calibr[c], "_", var, "_", region, "_", model))
     
   }
-  
-  
+
 }
 
 spc_calibr("abund", "MHI", "GLM")
