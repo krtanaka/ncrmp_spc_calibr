@@ -20,40 +20,31 @@ region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")
 model = c("GLM", "GLMM")
 
 spc_calibr = function(var, region, model){
+
+  # var = "abund"
+  # region = "MHI"
+  # model = "GLM"
   
-  var = "abund"
-  region = "MHI"
-  model = "GLM"
-  
+  # belt transect data
   belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>%
     filter(SIZE_10cm != "(0,10]" & SIZE_10cm != "(10,20]") %>%
-    group_by(SITEVISITID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_, n.transect) %>% # aggregate size bins, also filter out 10-20cm
+    group_by(SITEVISITID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_, n.transect) %>% 
     summarise(DENSITY = sum(!!sym(paste0(var, ".site")))) %>% 
-    mutate(PRESENCE = as.integer(DENSITY > 0)) %>% 
-    # group_by(SITEVISITID) %>%
-    # mutate(unique_transect_count = n_distinct(n.transect)) %>%
-    ungroup() %>%
+    mutate(PRESENCE = as.integer(DENSITY > 0),
+           BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+           # BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+           GROUP = SPECIES
+    ) %>% 
     mutate(
-      #DENSITY = DENSITY/unique_transect_count,
-      #PRESENCE = PRESENCE/unique_transect_count, 
-      BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
-      # BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
-      GROUP = SPECIES) %>% 
+      DENSITY = DENSITY/n.transect,
+      PRESENCE = PRESENCE/n.transect,
+    ) %>%
+    ungroup() %>%
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
   
-  spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region, ".rds")) %>% 
-    group_by(SITEVISITID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_) %>% # aggregate size bins
-    summarise(DENSITY = sum(!!sym(paste0(var, ".site")))) %>% 
-    ungroup() %>%
-    mutate(
-      PRESENCE = as.integer(DENSITY > 0),
-      BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
-      # BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
-      GROUP = SPECIES) %>% 
-    select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
-  
+  # towed diver data
   tow = readRDS(paste0("data/tow.segment.", var, ".size.20002017.", region, ".rds")) %>% 
-    subset(CENTROIDLON != 0 & SIZE_10cm != "(40,50]") %>% # remove size bins < 50 cm
+    subset(CENTROIDLON != 0 & SIZE_10cm != "(40,50]") %>%
     mutate(DEPTH_BIN = case_when(
       DEPTH >= 0  & DEPTH <= 6 ~ "Shallow",
       DEPTH > 6  & DEPTH <= 18 ~ "Mid",
@@ -61,17 +52,30 @@ spc_calibr = function(var, region, model){
       TRUE ~ ""),
       LONGITUDE = CENTROIDLON,
       LATITUDE = CENTROIDLAT) %>% 
-    group_by(TOWID, SEGMENTID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_) %>% # aggregate size bins
+    group_by(TOWID, SEGMENTID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_) %>% 
     summarise(DENSITY = sum(!!sym(paste0(var, ".segment")))) %>% 
-    mutate(PRESENCE = as.integer(DENSITY > 0)) %>% 
-    ungroup() %>% 
-    # group_by(TOWID) %>%
-    # mutate(unique_segment_count = n_distinct(SEGMENTID)) %>% 
-    # ungroup() %>% 
-    # group_by(TOWID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_) %>% # average by unique_segment_count
-    # summarise(DENSITY = DENSITY/unique_segment_count,
-    #           PRESENCE = PRESENCE/unique_segment_count) %>% 
     mutate(
+      PRESENCE = as.integer(DENSITY > 0),
+      BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+      # BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
+      GROUP = SPECIES
+    ) %>% 
+    ungroup() %>% 
+    group_by(TOWID) %>%
+    mutate(
+      unique_segment_count = n_distinct(SEGMENTID),
+      DENSITY = DENSITY/unique_segment_count,
+      PRESENCE = PRESENCE/unique_segment_count) %>%
+    ungroup() %>% 
+    select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
+  
+  # stationary point count data
+  spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region, ".rds")) %>% 
+    group_by(SITEVISITID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_) %>% 
+    summarise(DENSITY = sum(!!sym(paste0(var, ".site")))) %>% 
+    ungroup() %>%
+    mutate(
+      PRESENCE = as.integer(DENSITY > 0),
       BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
       # BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
       GROUP = SPECIES) %>% 
