@@ -8,7 +8,7 @@ library(ggh4x)
 
 rm(list = ls())
 
-var = c("abund", "biom")[2]
+var = c("abund", "biom")[1]
 
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
 
@@ -144,8 +144,8 @@ for (s in 1:length(species)) {
     mutate(longitude = round(longitude, 1),
            latitude = round(latitude, 1)) %>%
     # mutate(longitude = round(longitude / 0.5) * 0.5,
-    # latitude = round(latitude / 0.5) * 0.5) %>%
-    group_by(method, longitude, latitude) %>%
+           # latitude = round(latitude / 0.5) * 0.5) %>%
+    group_by(method, island, longitude, latitude) %>%
     summarise(density = mean(density)) %>%
     ggplot(aes(longitude, latitude)) + 
     geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)),
@@ -231,9 +231,9 @@ for (s in 1:length(species)) {
   df %>%
     # filter(density > 0) %>%
     filter(method == "nSPC_BLT_TOW") %>%
-    mutate(depth = round(depth, 1)) %>%
-    group_by(method, region, depth) %>%
-    summarise(density = mean(density, na.rm = T)) %>%
+    # mutate(depth = round(depth, 1)) %>%
+    # group_by(method, region, depth) %>%
+    # summarise(density = mean(density, na.rm = T)) %>%
     ggplot(aes(depth, density)) + 
     # geom_smooth(method = "gam", color = "gray60", fill = "gray80") +
     geom_point(aes(fill = density), shape = 21, alpha = 0.8, size = 3, show.legend = F) +
