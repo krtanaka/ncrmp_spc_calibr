@@ -169,6 +169,16 @@ for (s in 1:length(species)) {
   # ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, ".pdf"), height = 8, width = 16)
   ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, ".png"), height = 6, width = 18, units = "in")
   
+  max <- df %>%
+    filter(density > 0, method == "nSPC_BLT_TOW") %>%
+    mutate(longitude = round(longitude, 1),
+           latitude = round(latitude, 1)) %>%
+    group_by(longitude, latitude) %>%
+    summarise(mean_density = mean(density), .groups = 'drop') %>%
+    summarise(max_density = max(mean_density)) %>%
+    round(0) %>%
+    as.numeric()
+
   df %>% 
     filter(density > 0) %>%
     filter(method == "nSPC_BLT_TOW") %>%
@@ -181,7 +191,9 @@ for (s in 1:length(species)) {
     ggplot(aes(longitude, latitude)) + 
     geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)), aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group)) +
     geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.5) +
-    scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
+    scale_fill_gradientn(colours = matlab.like(100), limits = c(0, max), breaks = seq(0, max, by = 0.5)) +
+    scale_size_continuous(limits = c(0, max), breaks = seq(0, max, by = 0.5)) +
+    guides(fill = guide_legend(), size = guide_legend()) + 
     ggtitle(paste0(species[s], ": ", min(df$year), "-", max(df$year)),
             subtitle = paste0("Maximum observation per 100 sq.m = ", round(max(df$density), 1))) + 
     coord_equal(xlim = range(df$longitude), ylim = range(df$latitude)) +
