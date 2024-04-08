@@ -22,13 +22,11 @@ species = c(
   "NALI",
   "SCSC",
   "LUFU",
-  "LUKA",
-  "CHUN",
-  "BOMU")
+  "LUKA")
 
 for (s in 1:length(species)) {
   
-  # s = 1
+  # s = 2
   
   df = NULL
   
@@ -140,7 +138,7 @@ for (s in 1:length(species)) {
   if(var == "biom") unit = expression("Biomass (g) per 2.4" ~ km^2~"")
   
   df %>% 
-    # filter(density > 0) %>%
+    filter(density > 0) %>%
     filter(method != "nSPC_BLT_TOW") %>%
     mutate(longitude = round(longitude, 1),
            latitude = round(latitude, 1)) %>%
@@ -152,7 +150,10 @@ for (s in 1:length(species)) {
     geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)),
                  aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group)) +
     geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.5) +
-    scale_fill_gradientn(colours = matlab.like(100), guide = "legend") +
+    # scale_fill_gradientn(colours = matlab.like(100), limits = c(0, 3.5), breaks = seq(0, 3.5, by = 0.5)) +
+    # scale_size_continuous(limits = c(0, 3.5), breaks = seq(0, 3.5, by = 0.5)) +
+    scale_fill_gradientn(colours = matlab.like(100)) +
+    guides(fill = guide_legend(), size = guide_legend()) +
     facet_wrap(~ method) +
     ggtitle(paste0(species[s], ": ", min(df$year), "-", max(df$year)),
             subtitle = paste0("Maximum observation per 100 sq.m = ", round(max(df$density), 1))) + 
@@ -181,14 +182,14 @@ for (s in 1:length(species)) {
     as.numeric()
 
   df %>% 
-    filter(density > 0) %>%
+    # filter(density > 0) %>%
     filter(method == "nSPC_BLT_TOW") %>%
-    mutate(longitude = round(longitude, 1),
-           latitude = round(latitude, 1)) %>%
+    # mutate(longitude = round(longitude, 1),
+    #        latitude = round(latitude, 1)) %>%
     # mutate(longitude = round(longitude / 0.5) * 0.5,
-    # latitude = round(latitude / 0.5) * 0.5) %>%
-    group_by(longitude, latitude, region) %>%
-    summarise(density = mean(density)) %>%
+    #        latitude = round(latitude / 0.5) * 0.5) %>%
+    # group_by(longitude, latitude, region) %>%
+    # summarise(density = mean(density)) %>%
     ggplot(aes(longitude, latitude)) + 
     geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)), aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group)) +
     geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.5) +
@@ -203,7 +204,7 @@ for (s in 1:length(species)) {
     guides(color = guide_legend(unit), 
            fill = guide_legend(unit),
            size = guide_legend(unit)) + 
-    theme(legend.position = c(0.15, 0.2),
+    theme(legend.position = c(0.15, 0.35),
           legend.key = element_rect(colour = NA, fill = NA),
           legend.background = element_rect(fill = "transparent", colour = NA),
           legend.box.background = element_rect(fill = "transparent", colour = NA))
@@ -212,7 +213,7 @@ for (s in 1:length(species)) {
   ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, ".png"), height = 6, width = 8, units = "in")
   
   df %>% 
-    # filter(density > 0) %>%
+    filter(density > 0) %>%
     mutate(longitude = round(longitude, 1),
            latitude = round(latitude, 1)) %>%
     # mutate(longitude = round(longitude / 0.5) * 0.5,
@@ -221,7 +222,9 @@ for (s in 1:length(species)) {
     summarise(density = mean(density)) %>%
     ggplot(aes(longitude, latitude)) + 
     geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.5) +
-    scale_fill_gradientn(colours = matlab.like(100), guide = "legend", trans = "sqrt") +
+    scale_fill_gradientn(colours = matlab.like(100), limits = c(0, max), breaks = seq(0, max, by = 0.5), 
+                         guide = "legend") +
+    scale_size_continuous(limits = c(0, max), breaks = seq(0, max, by = 0.5)) +
     facet_grid(method ~ year) +
     ggtitle(paste0(species[s], ": ", min(df$year), "-", max(df$year)),
             subtitle = paste0("Maximum density per 100 sq.m : ", round(max(df$density), 1))) + 
@@ -236,7 +239,7 @@ for (s in 1:length(species)) {
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   # ggsave(last_plot(),file = paste0("output/plot/map_c_", species[s], "_", var, ".pdf"),height = 10, width = 30)
-  ggsave(last_plot(),file = paste0("output/plot/map_c_", species[s], "_", var, ".png"),height = 7, width = 28, units = "in")
+  ggsave(last_plot(),file = paste0("output/plot/map_c_", species[s], "_", var, ".png"), height = 10, width = 28, units = "in")
   
   if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~"")
   if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~"")
@@ -259,7 +262,7 @@ for (s in 1:length(species)) {
            size = guide_legend(unit))
   
   # ggsave(last_plot(),file = paste0("output/plot/depth_", species[s], "_", var, ".pdf"), height = 5, width = 10)
-  ggsave(last_plot(),file = paste0("output/plot/depth_", species[s], "_", var, ".png"), height = 5, width = 10, units = "in")
+  # ggsave(last_plot(),file = paste0("output/plot/depth_", species[s], "_", var, ".png"), height = 5, width = 10, units = "in")
   
   df %>%
     filter(method != "nSPC_BLT_TOW") %>%
@@ -297,7 +300,7 @@ for (s in 1:length(species)) {
     ggplot(aes(x = year, y = mean_density, fill = mean_density)) +
     geom_errorbar(aes(ymin = mean_density - se_density, ymax = mean_density + se_density), width = 0, show.legend = F) +
     geom_point(size = 3, shape = 21, show.legend = F) +
-    scale_fill_gradientn(colours = matlab.like(100), "", tran = "sqrt") +
+    # scale_fill_gradientn(colours = matlab.like(100), "", tran = "sqrt") +
     ggtitle(species[s]) + 
     labs(x = NULL, y = unit) +
     facet_wrap(~region, scales = "free_y") +
@@ -322,7 +325,7 @@ for (s in 1:length(species)) {
     geom_errorbar(aes(ymin = mean_density - se_density, ymax = mean_density + se_density), 
                   width = 0, position = position_dodge(width = 0.5), show.legend = F) +
     geom_point(size = 3, shape = 21, position = position_dodge(width = 0.5), show.legend = F) +
-    scale_fill_gradientn(colours = matlab.like(100), "", tran = "sqrt") +
+    # scale_fill_gradientn(colours = matlab.like(100), "", tran = "sqrt") +
     ggtitle(species[s]) + 
     labs(x = NULL, y = unit) + 
     facet_wrap(~island, scales = "free_y") +

@@ -59,9 +59,7 @@ species = c(
   "NALI",
   "SCSC",
   "LUFU",
-  "LUKA",
-  "CHUN",
-  "BOMU")
+  "LUKA")
 
 for (s in 1:length(species)) {
   
@@ -98,3 +96,4 @@ for (s in 1:length(species)) {
   ggsave(last_plot(),file = paste0("output/plot/coef_", species[s], ".png"), height = 10, width = 10, units = "in")
   
 }
+
