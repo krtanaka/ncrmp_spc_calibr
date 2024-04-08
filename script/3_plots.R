@@ -13,6 +13,7 @@ var = c("abund", "biom")[1]
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
 
 species = c(
+  "APXA",
   "APVI",
   "ACLI",
   "ACNC",
