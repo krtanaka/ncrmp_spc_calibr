@@ -51,6 +51,7 @@ df_list <- lapply(folders, read_summary_table)
 names(df_list) <- basename(folders)
 
 species = c(
+  "APXA",
   "APVI",
   "ACLI",
   "ACNC",
