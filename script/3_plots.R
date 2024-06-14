@@ -22,7 +22,8 @@ species = c(
   "NALI",
   "SCSC",
   "LUFU",
-  "LUKA")
+  "LUKA",
+  "CEAR")
 
 for (s in 1:length(species)) {
   

@@ -60,11 +60,12 @@ species = c(
   "NALI",
   "SCSC",
   "LUFU",
-  "LUKA")
+  "LUKA",
+  "CEAR")
 
 for (s in 1:length(species)) {
   
-  # s = 1
+  # s = 11
   
   p1 <- bind_rows(df_list, .id = "folder")  %>% 
     separate(folder, into = c("spc", "belt_tow", "var", "region", "model"), sep = "_") %>%
