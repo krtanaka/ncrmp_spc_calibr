@@ -10,7 +10,7 @@ rm(list = ls())
 
 var = c("abund", "biom")[1]
 
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[4]
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
 
 species = c(
   "APXA",
@@ -27,7 +27,7 @@ species = c(
 
 for (s in 1:length(species)) {
   
-  # s = 1
+  # s = 2
   
   df = NULL
   
