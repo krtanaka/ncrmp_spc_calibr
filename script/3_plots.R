@@ -10,7 +10,7 @@ rm(list = ls())
 
 var = c("abund", "biom")[1]
 
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[2]
 
 species = c(
   "APXA",
@@ -23,7 +23,7 @@ species = c(
   "SCSC",
   "LUFU",
   "LUKA",
-  "CEAR")
+  "CEAR")[2]
 
 for (s in 1:length(species)) {
   
@@ -133,7 +133,7 @@ for (s in 1:length(species)) {
            longitude = ifelse(longitude < 0, longitude + 360, longitude),
            density = density * 100)
   
-  save(df, file = paste0("output/calibr_df/calibr_", species[s], "_", var, ".RData"))
+  save(df, file = paste0("output/calibr_df/calibr_", species[s], "_", var, "_", region, ".RData"))
   
   if(var == "abund") unit = expression("Individuals (n) per 2.4" ~ km^2~"")
   if(var == "biom") unit = expression("Biomass (g) per 2.4" ~ km^2~"")
@@ -169,7 +169,7 @@ for (s in 1:length(species)) {
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   # ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, ".pdf"), height = 8, width = 16)
-  ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, ".png"), height = 6, width = 18, units = "in")
+  ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, "_", region, ".png"), height = 6, width = 18, units = "in")
   
   max <- df %>%
     filter(density > 0, method == "nSPC_BLT_TOW") %>%
@@ -211,7 +211,7 @@ for (s in 1:length(species)) {
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   # ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, ".pdf"), height = 8, width = 16)
-  ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, ".png"), height = 6, width = 8, units = "in")
+  ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, "_", region, ".png"), height = 6, width = 8, units = "in")
   
   df %>% 
     # filter(density > 0) %>%
@@ -234,7 +234,7 @@ for (s in 1:length(species)) {
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   # ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, ".pdf"), height = 8, width = 16)
-  ggsave(last_plot(),file = paste0("output/plot/map_c_", species[s], "_", var, ".png"), height = 6, width = 8, units = "in")
+  ggsave(last_plot(),file = paste0("output/plot/map_c_", species[s], "_", var, "_", region, ".png"), height = 6, width = 8, units = "in")
   
   df %>% 
     # filter(density > 0) %>%
@@ -263,7 +263,7 @@ for (s in 1:length(species)) {
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   # ggsave(last_plot(),file = paste0("output/plot/map_c_", species[s], "_", var, ".pdf"),height = 10, width = 30)
-  ggsave(last_plot(),file = paste0("output/plot/map_d_", species[s], "_", var, ".png"), height = 10, width = 28, units = "in")
+  ggsave(last_plot(),file = paste0("output/plot/map_d_", species[s], "_", var, "_", region, ".png"), height = 10, width = 28, units = "in")
   
   if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~"")
   if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~"")
@@ -312,7 +312,7 @@ for (s in 1:length(species)) {
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   # ggsave(last_plot(),file = paste0("output/plot/ts_a_", species[s], "_", var, ".pdf"), height = 5, width = 10)
-  ggsave(last_plot(),file = paste0("output/plot/ts_a_", species[s], "_", var, ".png"), height = 5, width = 10, units = "in")
+  ggsave(last_plot(),file = paste0("output/plot/ts_a_", species[s], "_", var, "_", region, ".png"), height = 5, width = 10, units = "in")
   
   df %>%
     filter(method != "nSPC_BLT_TOW") %>%
@@ -333,7 +333,7 @@ for (s in 1:length(species)) {
           axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   
   # ggsave(last_plot(),file = paste0("output/plot/ts_b_", species[s], "_", var, ".pdf"), height = 5, width = 10)
-  ggsave(last_plot(),file = paste0("output/plot/ts_b_", species[s], "_", var, ".png"), height = 5, width = 10, units = "in")
+  ggsave(last_plot(),file = paste0("output/plot/ts_b_", species[s], "_", var, "_", region, ".png"), height = 5, width = 10, units = "in")
   
   dfi = df %>%
     filter(method != "nSPC_BLT_TOW") %>% 
@@ -357,6 +357,6 @@ for (s in 1:length(species)) {
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   
   # ggsave(last_plot(),file = paste0("output/plot/ts_c_", species[s], "_", var, ".pdf"), height = 5, width = 10)
-  ggsave(last_plot(),file = paste0("output/plot/ts_c_", species[s], "_", var, ".png"), height = 10, width = 20, units = "in")
+  ggsave(last_plot(),file = paste0("output/plot/ts_c_", species[s], "_", var, "_", region, ".png"), height = 10, width = 20, units = "in")
   
 }
