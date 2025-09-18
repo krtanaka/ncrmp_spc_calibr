@@ -10,7 +10,7 @@ rm(list = ls())
 
 var = c("abund", "biom")[1]
 
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[5]
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
 
 species = c(
   "APXA",
@@ -27,7 +27,7 @@ species = c(
 
 for (s in 1:length(species)) {
   
-  # s = 2
+  # s = 1
   
   df = NULL
   
@@ -135,9 +135,9 @@ for (s in 1:length(species)) {
   
   save(df, file = paste0("output/calibr_df/calibr_", species[s], "_", var, "_", region, ".RData"))
   
-  if(var == "abund") unit = expression("Individuals (n) per 2.4" ~ km^2~"")
-  if(var == "biom") unit = expression("Biomass (g) per 2.4" ~ km^2~"")
-  
+  if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~""); subtitle_text <- bquote("Maximum obs. (n) per 100" ~ m^2 * ": " * .(round(max(df$density), 1)))
+  if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~""); subtitle_text <- bquote("Maximum obs. (g) per 100" ~ m^2 * ": " * .(round(max(df$density), 1)))
+
   df %>% 
     # filter(density > 0) %>%
     filter(method != "nSPC_BLT_TOW") %>%
@@ -156,8 +156,10 @@ for (s in 1:length(species)) {
     # scale_fill_gradientn(colours = matlab.like(100), limits = c(0, 1), breaks = seq(0, 1, by = 0.5)) +
     # scale_size_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.5)) +
     facet_wrap(~ method) +
-    ggtitle(paste0(species[s], ": ", min(df$year), "-", max(df$year)),
-            subtitle = paste0("Maximum observation per 100 sq.m = ", round(max(df$density), 1))) + 
+    ggtitle(
+      paste0(species[s], ": ", min(df$year), "-", max(df$year)),
+      subtitle = subtitle_text
+    ) + 
     labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
          y = expression(paste("Latitude ", degree, "N", sep = ""))) +
     guides(color = guide_legend(unit),
@@ -191,14 +193,16 @@ for (s in 1:length(species)) {
     group_by(longitude, latitude, region) %>%
     summarise(density = mean(density)) %>%
     ggplot(aes(longitude, latitude)) + 
-    geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)),
+    geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)), 
                  aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group)) +
     geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.5) +
     scale_fill_gradientn(colours = matlab.like(100)) +
     # scale_fill_gradientn(colours = matlab.like(100), limits = c(0, max), breaks = seq(0, max, by = 0.5)) +
     # scale_size_continuous(limits = c(0, max), breaks = seq(0, max, by = 0.5)) +
-    ggtitle(paste0(species[s], ": ", min(df$year), "-", max(df$year)),
-            subtitle = paste0("Maximum observation per 100 sq.m = ", round(max(df$density), 1))) + 
+    ggtitle(
+      paste0(species[s], ": ", min(df$year), "-", max(df$year)),
+      subtitle = subtitle_text
+    ) + 
     coord_equal(xlim = range(df$longitude), ylim = range(df$latitude)) +
     labs(x = expression(paste("Longitude ", degree, "", sep = "")),
          y = expression(paste("Latitude ", degree, "", sep = ""))) +
@@ -221,8 +225,10 @@ for (s in 1:length(species)) {
     scale_fill_gradientn(colours = matlab.like(100)) +
     # scale_fill_gradientn(colours = matlab.like(100), limits = c(0, max), breaks = seq(0, max, by = 0.5)) +
     # scale_size_continuous(limits = c(0, max), breaks = seq(0, max, by = 0.5)) +
-    ggtitle(paste0(species[s], ": ", min(df$year), "-", max(df$year)),
-            subtitle = paste0("Maximum observation per 100 sq.m = ", round(max(df$density), 1))) + 
+    ggtitle(
+      paste0(species[s], ": ", min(df$year), "-", max(df$year)),
+      subtitle = subtitle_text
+    ) + 
     facet_wrap(~island, scales = "free") + 
     labs(x = expression(paste("Longitude ", degree, "", sep = "")),
          y = expression(paste("Latitude ", degree, "", sep = ""))) +
@@ -237,7 +243,7 @@ for (s in 1:length(species)) {
   ggsave(last_plot(),file = paste0("output/plot/map_c_", species[s], "_", var, "_", region, ".png"), height = 6, width = 8, units = "in")
   
   df %>% 
-    # filter(density > 0) %>%
+    filter(density > 0) %>%
     mutate(longitude = round(longitude, 1),
            latitude = round(latitude, 1)) %>%
     # mutate(longitude = round(longitude / 0.5) * 0.5,
@@ -250,8 +256,10 @@ for (s in 1:length(species)) {
                          guide = "legend") +
     scale_size_continuous(limits = c(0, max), breaks = seq(0, max, by = 1)) +
     facet_grid(method ~ year) +
-    ggtitle(paste0(species[s], ": ", min(df$year), "-", max(df$year)),
-            subtitle = paste0("Maximum density per 100 sq.m : ", round(max(df$density), 1))) + 
+    ggtitle(
+      paste0(species[s], ": ", min(df$year), "-", max(df$year)),
+      subtitle = subtitle_text
+    ) + 
     guides(color = guide_legend(unit), 
            fill = guide_legend(unit),
            size = guide_legend(unit)) + 
