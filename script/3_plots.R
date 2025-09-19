@@ -135,8 +135,15 @@ for (s in 1:length(species)) {
   
   save(df, file = paste0("output/calibr_df/calibr_", species[s], "_", var, "_", region, ".RData"))
   
-  if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~""); subtitle_text <- bquote("Maximum obs. (n) per 100" ~ m^2 * ": " * .(round(max(df$density), 1)))
-  if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~""); subtitle_text <- bquote("Maximum obs. (g) per 100" ~ m^2 * ": " * .(round(max(df$density), 1)))
+  if (var == "abund") {
+    unit <- expression("Individuals (n) per 100" ~ m^2)
+    subtitle_text <- bquote("Maximum obs. (n) per 100" ~ m^2 * ": " * .(round(max(df$density), 1)))
+  }
+  
+  if (var == "biom") {
+    unit <- expression("Biomass (g) per 100" ~ m^2)
+    subtitle_text <- bquote("Maximum obs. (g) per 100" ~ m^2 * ": " * .(round(max(df$density), 1)))
+  }
 
   df %>% 
     # filter(density > 0) %>%
@@ -151,7 +158,7 @@ for (s in 1:length(species)) {
     geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)),
                  aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group)) +
     coord_equal(xlim = range(df$longitude), ylim = range(df$latitude)) +
-    geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.5) +
+    geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.8) +
     scale_fill_gradientn(colours = matlab.like(100)) +
     # scale_fill_gradientn(colours = matlab.like(100), limits = c(0, 1), breaks = seq(0, 1, by = 0.5)) +
     # scale_size_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.5)) +
@@ -171,7 +178,7 @@ for (s in 1:length(species)) {
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
   # ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, ".pdf"), height = 8, width = 16)
-  ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, "_", region, ".png"), height = 6, width = 18, units = "in")
+  ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, "_", region, ".png"), height = 4, width = 10, units = "in")
   
   max <- df %>%
     filter(density > 0, method == "nSPC_BLT_TOW") %>%
@@ -195,7 +202,7 @@ for (s in 1:length(species)) {
     ggplot(aes(longitude, latitude)) + 
     geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)), 
                  aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group)) +
-    geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.5) +
+    geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.8) +
     scale_fill_gradientn(colours = matlab.like(100)) +
     # scale_fill_gradientn(colours = matlab.like(100), limits = c(0, max), breaks = seq(0, max, by = 0.5)) +
     # scale_size_continuous(limits = c(0, max), breaks = seq(0, max, by = 0.5)) +
@@ -218,10 +225,10 @@ for (s in 1:length(species)) {
   ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, "_", region, ".png"), height = 6, width = 8, units = "in")
   
   df %>% 
-    # filter(density > 0) %>%
+    filter(density > 0) %>%
     filter(method == "nSPC_BLT_TOW") %>%
     ggplot(aes(longitude, latitude, island)) + 
-    geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.5) +
+    geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.8) +
     scale_fill_gradientn(colours = matlab.like(100)) +
     # scale_fill_gradientn(colours = matlab.like(100), limits = c(0, max), breaks = seq(0, max, by = 0.5)) +
     # scale_size_continuous(limits = c(0, max), breaks = seq(0, max, by = 0.5)) +
@@ -275,6 +282,16 @@ for (s in 1:length(species)) {
   
   if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~"")
   if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~"")
+  
+  if (var == "abund") {
+    unit <- expression("Individuals (n) per 100" ~ m^2)
+    subtitle_text <- bquote("Maximum obs. (n) per 100" ~ m^2 * ": " * .(round(max(df$density), 1)))
+  }
+  
+  if (var == "biom") {
+    unit <- expression("Biomass (g) per 100" ~ m^2)
+    subtitle_text <- bquote("Maximum obs. (g) per 100" ~ m^2 * ": " * .(round(max(df$density), 1)))
+  }
   
   df %>%
     # filter(density > 0) %>%
