@@ -5,10 +5,11 @@ library(ggplot2)
 library(dplyr)
 library(boot)
 library(ggh4x)
+library(scales)
 
 rm(list = ls())
 
-var = c("abund", "biom")[1]
+var = c("abund", "biom")[2]
 
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
 
@@ -144,38 +145,49 @@ for (s in 1:length(species)) {
     unit <- expression("Biomass (g) per 100" ~ m^2)
     subtitle_text <- bquote("Maximum obs. (g) per 100" ~ m^2 * ": " * .(round(max(df$density), 1)))
   }
-
-  df %>% 
-    # filter(density > 0) %>%
+  
+  pdat <- df %>%
+    filter(density > 0,) %>%
     filter(method != "nSPC_BLT_TOW") %>%
-    # mutate(longitude = round(longitude, 1),
-           # latitude = round(latitude, 1)) %>%
-    mutate(longitude = round(longitude / 0.5) * 0.5,
-           latitude = round(latitude / 0.5) * 0.5) %>%
+    # mutate(longitude = round(longitude / 0.5) * 0.5,
+    # latitude  = round(latitude  / 0.5) * 0.5) %>%
+    mutate(longitude = round(longitude, 1),
+           latitude = round(latitude, 1)) %>%
     group_by(method, island, longitude, latitude) %>%
-    summarise(density = mean(density)) %>%
-    ggplot(aes(longitude, latitude)) + 
-    geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)),
-                 aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group)) +
-    coord_equal(xlim = range(df$longitude), ylim = range(df$latitude)) +
-    geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.8) +
-    scale_fill_gradientn(colours = matlab.like(100)) +
-    # scale_fill_gradientn(colours = matlab.like(100), limits = c(0, 1), breaks = seq(0, 1, by = 0.5)) +
-    # scale_size_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.5)) +
-    facet_wrap(~ method) +
-    ggtitle(
-      paste0(species[s], ": ", min(df$year), "-", max(df$year)),
-      subtitle = subtitle_text
+    summarise(density = mean(density), .groups = "drop")
+  
+  cap  <- quantile(pdat$density, 0.99, na.rm = TRUE)
+  pdat <- dplyr::mutate(pdat, density_c = pmin(density, cap))
+  
+  brks <- signif(quantile(pdat$density_c, c(.10,.25,.50,.75,.90,.98), na.rm = TRUE), 2)
+  brks <- unique(c(brks, cap)) # append cap
+  labs <- scales::number_format(accuracy = 0.01)(brks)
+  
+  ggplot(pdat, aes(longitude, latitude)) +
+    geom_point(aes(size = density_c, fill = density_c),
+               shape = 21, alpha = 0.85, colour = "grey25") +
+    scale_size_area(
+      name = unit,
+      breaks = brks, labels = labs,
+      limits = c(0, cap), oob = scales::squish, max_size = 12
+    ) +
+    scale_fill_stepsn(
+      name = unit,
+      breaks = brks, labels = labs,
+      limits = c(0, cap), oob = scales::squish,
+      colours = viridis::magma(9),  # smoother gradient than matlab.like
+      guide = "legend"
     ) + 
-    labs(x = expression(paste("Longitude ", degree, "W", sep = "")),
-         y = expression(paste("Latitude ", degree, "N", sep = ""))) +
-    guides(color = guide_legend(unit),
-           fill = guide_legend(unit),
-           size = guide_legend(unit)) +
-    theme(legend.position = "bottom",
-          legend.key = element_rect(colour = NA, fill = NA),
-          legend.background = element_rect(fill = "transparent", colour = NA),
-          legend.box.background = element_rect(fill = "transparent", colour = NA))
+    facet_wrap(~ method, ncol = 1) +
+    # guides(
+    #   size = guide_legend(order = 1, override.aes = list(shape = 21)),
+    #   fill = guide_legend(order = 1, override.aes = list(shape = 21, size = 6))
+    # ) +
+    geom_polygon(
+      data = fortify(maps::map("world2", plot = FALSE, fill = TRUE)),
+      aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group)
+    ) +
+    coord_equal(xlim = range(df$longitude), ylim = range(df$latitude))
   
   # ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, ".pdf"), height = 8, width = 16)
   ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, "_", region, ".png"), height = 4, width = 10, units = "in")
@@ -189,12 +201,12 @@ for (s in 1:length(species)) {
     summarise(max_density = max(mean_density)) %>%
     round(1) %>%
     as.numeric()
-
+  
   df %>% 
     # filter(density > 0) %>%
     filter(method == "nSPC_BLT_TOW") %>%
     # mutate(longitude = round(longitude, 1),
-           # latitude = round(latitude, 1)) %>%
+    # latitude = round(latitude, 1)) %>%
     # mutate(longitude = round(longitude / 0.5) * 0.5,
     #        latitude = round(latitude / 0.5) * 0.5) %>%
     group_by(longitude, latitude, region) %>%

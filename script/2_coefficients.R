@@ -56,6 +56,7 @@ species = c(
   "ACLI",
   "ACNC",
   "CAME",
+  "CEAR",
   "MOGR",
   "NALI",
   "SCSC",
