@@ -11,7 +11,7 @@ rm(list = ls())
 
 var = c("abund", "biom")[2]
 
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[2]
 
 species = c(
   "APXA",
@@ -24,7 +24,9 @@ species = c(
   "SCSC",
   "LUFU",
   "LUKA",
-  "CEAR")[2]
+  "CAIG",
+  "CALU",
+  "CEAR")[11]
 
 for (s in 1:length(species)) {
   
@@ -159,13 +161,29 @@ for (s in 1:length(species)) {
   cap  <- quantile(pdat$density, 0.99, na.rm = TRUE)
   pdat <- dplyr::mutate(pdat, density_c = pmin(density, cap))
   
-  brks <- signif(quantile(pdat$density_c, c(.10,.25,.50,.75,.90,.98), na.rm = TRUE), 2)
+  brks <- signif(quantile(pdat$density_c, c(.10,
+                                            .25,
+                                            .50,
+                                            .75,
+                                            .90,
+                                            .98), na.rm = TRUE), 2)
   brks <- unique(c(brks, cap)) # append cap
   labs <- scales::number_format(accuracy = 0.01)(brks)
   
+  lon_range <- range(pdat$longitude, na.rm = TRUE)
+  lat_range <- range(pdat$latitude, na.rm = TRUE)
+  
+  lon_buffer <- diff(lon_range) * 0.1
+  lat_buffer <- diff(lat_range) * 0.1
+  
   ggplot(pdat, aes(longitude, latitude)) +
+    geom_polygon(
+      data = fortify(maps::map("world2", plot = FALSE, fill = TRUE)),
+      aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group),
+      fill = "grey20", colour = "grey70", size = 0.2
+    ) +
     geom_point(aes(size = density_c, fill = density_c),
-               shape = 21, alpha = 0.85, colour = "grey25") +
+               shape = 21, alpha = 0.6, colour = "grey25") +
     scale_size_area(
       name = unit,
       breaks = brks, labels = labs,
@@ -173,67 +191,90 @@ for (s in 1:length(species)) {
     ) +
     scale_fill_stepsn(
       name = unit,
-      breaks = brks, labels = labs,
+      breaks = brks, 
+      labels = labs,
       limits = c(0, cap), oob = scales::squish,
-      colours = viridis::magma(9),  # smoother gradient than matlab.like
-      guide = "legend"
+      colours = viridis::magma(9),
+      guide = "legend",
+      trans = "sqrt"
     ) + 
-    facet_wrap(~ method, ncol = 1) +
-    # guides(
-    #   size = guide_legend(order = 1, override.aes = list(shape = 21)),
-    #   fill = guide_legend(order = 1, override.aes = list(shape = 21, size = 6))
-    # ) +
+    facet_wrap(~ method) +
+    coord_equal(
+      xlim = c(lon_range[1] - lon_buffer, lon_range[2] + lon_buffer),
+      ylim = c(lat_range[1] - lat_buffer, lat_range[2] + lat_buffer)
+    ) +
+    theme(
+      strip.background = element_rect(fill = "grey95"),
+      panel.grid.minor = element_blank(),
+      legend.position = "right"
+    )
+  
+   x_range <- (lon_range[2] + lon_buffer) - (lon_range[1] - lon_buffer)
+  y_range <- (lat_range[2] + lat_buffer) - (lat_range[1] - lat_buffer)
+  
+   scale_factor <- 0.8 
+  
+  
+  dynamic_height <- y_range * scale_factor
+  dynamic_width  <- (x_range * scale_factor * 3) + 2 
+  
+  ggsave(
+    filename = paste0("output/plot/map_a_", species[s], "_", var, "_", region, ".png"),
+    plot = last_plot(),
+    height = dynamic_height, 
+    width = dynamic_width, 
+    units = "in",
+    dpi = 300
+  )
+  
+  library(classInt)
+  library(viridis)
+  library(scales)
+ 
+  val_to_break <- pdat$density_c[pdat$density_c > 0]
+  n_classes <- 4 
+  
+  jenks_brks <- classIntervals(val_to_break, n = n_classes, style = "jenks")$brks
+  
+  final_breaks <- unique(c(0, signif(jenks_brks, 2)))
+  
+  ggplot(pdat, aes(longitude, latitude)) +
     geom_polygon(
       data = fortify(maps::map("world2", plot = FALSE, fill = TRUE)),
-      aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group)
+      aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group),
+      fill = "grey20", colour = "grey70", linewidth = 0.2
     ) +
-    coord_equal(xlim = range(df$longitude), ylim = range(df$latitude))
-  
-  # ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, ".pdf"), height = 8, width = 16)
-  ggsave(last_plot(),file = paste0("output/plot/map_a_", species[s], "_", var, "_", region, ".png"), height = 4, width = 10, units = "in")
-  
-  max <- df %>%
-    filter(density > 0, method == "nSPC_BLT_TOW") %>%
-    mutate(longitude = round(longitude, 1),
-           latitude = round(latitude, 1)) %>%
-    group_by(longitude, latitude) %>%
-    summarise(mean_density = mean(density), .groups = 'drop') %>%
-    summarise(max_density = max(mean_density)) %>%
-    round(1) %>%
-    as.numeric()
-  
-  df %>% 
-    # filter(density > 0) %>%
-    filter(method == "nSPC_BLT_TOW") %>%
-    # mutate(longitude = round(longitude, 1),
-    # latitude = round(latitude, 1)) %>%
-    # mutate(longitude = round(longitude / 0.5) * 0.5,
-    #        latitude = round(latitude / 0.5) * 0.5) %>%
-    group_by(longitude, latitude, region) %>%
-    summarise(density = mean(density)) %>%
-    ggplot(aes(longitude, latitude)) + 
-    geom_polygon(data = fortify(maps::map("world2", plot = F, fill = T)), 
-                 aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group)) +
-    geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.8) +
-    scale_fill_gradientn(colours = matlab.like(100)) +
-    # scale_fill_gradientn(colours = matlab.like(100), limits = c(0, max), breaks = seq(0, max, by = 0.5)) +
-    # scale_size_continuous(limits = c(0, max), breaks = seq(0, max, by = 0.5)) +
-    ggtitle(
-      paste0(species[s], ": ", min(df$year), "-", max(df$year)),
-      subtitle = subtitle_text
+    geom_point(aes(size = density_c, fill = density_c),
+               shape = 21, alpha = 0.6,  stroke = 0.3) +
+    
+    scale_fill_stepsn(
+      name = unit, 
+      breaks = final_breaks, 
+      labels = scales::label_comma(accuracy = 0.1), # Ensures length match
+      limits = c(0, max(final_breaks)), 
+      oob = scales::squish,
+      colours = viridis::mako(length(final_breaks)),
+      guide = "legend"
+    ) +
+    scale_size_area(
+      name = unit, 
+      breaks = final_breaks, 
+      labels = scales::label_comma(accuracy = 0.1), # Ensures length match
+      limits = c(0, max(final_breaks)), 
+      max_size = 12
     ) + 
-    coord_equal(xlim = range(df$longitude), ylim = range(df$latitude)) +
-    labs(x = expression(paste("Longitude ", degree, "", sep = "")),
-         y = expression(paste("Latitude ", degree, "", sep = ""))) +
-    guides(color = guide_legend(unit), 
-           fill = guide_legend(unit),
-           size = guide_legend(unit)) + 
-    theme(legend.position = c(0.15, 0.35),
-          legend.key = element_rect(colour = NA, fill = NA),
-          legend.background = element_rect(fill = "transparent", colour = NA),
-          legend.box.background = element_rect(fill = "transparent", colour = NA))
+    
+    facet_wrap(~ method) +
+    coord_equal(
+      xlim = c(lon_range[1] - lon_buffer, lon_range[2] + lon_buffer),
+      ylim = c(lat_range[1] - lat_buffer, lat_range[2] + lat_buffer)
+    ) +
+    labs(
+      title = paste0(species[s], ": 2003-2022"),
+      subtitle = subtitle_text,
+      x = "Longitude (°E)", y = "Latitude (°N)"
+    )
   
-  # ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, ".pdf"), height = 8, width = 16)
   ggsave(last_plot(),file = paste0("output/plot/map_b_", species[s], "_", var, "_", region, ".png"), height = 6, width = 8, units = "in")
   
   df %>% 
