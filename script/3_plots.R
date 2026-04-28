@@ -13,28 +13,11 @@ rm(list = ls())
 
 var = c("abund", "biom")[2]
 
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[2]
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[4]
 
 species = c(
-  "ACLI", #1
-  "ACNC", #2
-  "APVI", #3
-  "APXA", #4
-  "CAIG", #5
-  "CALU", #6
-  "CAME", #7
-  "CEAR", #8
-  "LERU", #9
-  "LUBO", #10
-  "LUFU", #11
-  "LUKA", #12
-  "MOGR", #13
-  "NALI", #14
-  "NAUN", #15
-  "SCLY", #16
-  "SCSC", #17
-  "VALO"  #18
-)[15]
+   "BOMU",
+  "CHUD")
 
 for (s in 1:length(species)) {
   
@@ -138,13 +121,14 @@ for (s in 1:length(species)) {
     mutate(method = "nSPC_BLT_TOW")
   
   df <- rbind(df_spc, df_tow_blt, df_nSPC_BLT_TOW) %>% 
+    filter(island == "Wake") %>% 
     mutate(year = year(date_),
            month = month(date_),
            day = day(date_),
            longitude = ifelse(longitude < 0, longitude + 360, longitude),
            density = density * 100)
   
-  save(df, file = paste0("output/calibr_df/calibr_", species[s], "_", var, "_", region, ".RData"))
+  save(df, file = paste0("output/calibr_df/calibr_", species[s], "_", var, "_Wake.RData"))
   
   if (var == "abund") {
     unit <- expression("Individuals (n) per 100" ~ m^2)
@@ -157,10 +141,10 @@ for (s in 1:length(species)) {
   }
   
   pdat <- df %>%
-    filter(density > 0,) %>%
+    # filter(density > 0,) %>%
     filter(method != "nSPC_BLT_TOW") %>%
-    mutate(longitude = round(longitude, 1),
-           latitude = round(latitude, 1)) %>%
+    # mutate(longitude = round(longitude, 1),
+           # latitude = round(latitude, 1)) %>%
     group_by(method, island, longitude, latitude) %>%
     summarise(density = mean(density), .groups = "drop")
   
@@ -183,11 +167,11 @@ for (s in 1:length(species)) {
   lat_buffer <- diff(lat_range) * 0.1
   
   p =  ggplot(pdat, aes(longitude, latitude)) +
-    geom_polygon(
-      data = fortify(maps::map("world2", plot = FALSE, fill = TRUE)),
-      aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group),
-      fill = "grey20", colour = "grey70", size = 0.2
-    ) +
+    # geom_polygon(
+    #   data = fortify(maps::map("world2", plot = FALSE, fill = TRUE)),
+    #   aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group),
+    #   fill = "grey20", colour = "grey70", size = 0.2
+    # ) +
     geom_point(aes(size = density_c, fill = density_c),
                shape = 21, alpha = 0.6, colour = "grey25") +
     scale_size_area(
@@ -205,6 +189,7 @@ for (s in 1:length(species)) {
       guide = "legend"
     ) + 
     facet_wrap(~ method) +
+    ggtitle(species[s]) + 
     coord_equal(
       xlim = c(lon_range[1] - lon_buffer, lon_range[2] + lon_buffer),
       ylim = c(lat_range[1] - lat_buffer, lat_range[2] + lat_buffer)
@@ -224,19 +209,19 @@ for (s in 1:length(species)) {
   dynamic_width  <- (x_range * scale_factor * 3) + 2 
   
   ggsave(
-    filename = paste0("output/plot/map_a_", species[s], "_", var, "_", region, ".png"),
+    filename = paste0("output/plot/map_a_", species[s], "_", var, "_Wake.png"),
     plot = p,
-    height = dynamic_height, 
-    width = dynamic_width, 
+    height = 5, 
+    width = 15, 
     units = "in",
     dpi = 300
   )
   
   pdat <- df %>%
-    filter(density > 0,) %>%
+    # filter(density > 0,) %>%
     filter(method == "nSPC_BLT_TOW") %>%
-    mutate(longitude = round(longitude, 1),
-           latitude = round(latitude, 1)) %>%
+    # mutate(longitude = round(longitude, 1),
+    #        latitude = round(latitude, 1)) %>%
     group_by(method, island, longitude, latitude) %>%
     summarise(density = mean(density), .groups = "drop")
   
@@ -259,11 +244,11 @@ for (s in 1:length(species)) {
   lat_buffer <- diff(lat_range) * 0.1
   
   p = ggplot(pdat, aes(longitude, latitude)) +
-    geom_polygon(
-      data = fortify(maps::map("world2", plot = FALSE, fill = TRUE)),
-      aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group),
-      fill = "grey20", colour = "grey70", size = 0.2
-    ) +
+    # geom_polygon(
+    #   data = fortify(maps::map("world2", plot = FALSE, fill = TRUE)),
+    #   aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group),
+    #   fill = "grey20", colour = "grey70", size = 0.2
+    # ) +
     geom_point(aes(size = density_c, fill = density_c),
                shape = 21, alpha = 0.6, colour = "grey25") +
     scale_size_area(
@@ -281,6 +266,7 @@ for (s in 1:length(species)) {
       guide = "legend"
     ) + 
     facet_wrap(~ method) +
+    ggtitle(species[s]) + 
     coord_equal(
       xlim = c(lon_range[1] - lon_buffer, lon_range[2] + lon_buffer),
       ylim = c(lat_range[1] - lat_buffer, lat_range[2] + lat_buffer)
@@ -300,10 +286,10 @@ for (s in 1:length(species)) {
   dynamic_width  <- (x_range * scale_factor) + 2 
   
   ggsave(
-    filename = paste0("output/plot/map_b_", species[s], "_", var, "_", region, ".png"),
+    filename = paste0("output/plot/map_b_", species[s], "_", var, "_Wake.png"),
     plot = p,
-    height = dynamic_height, 
-    width = dynamic_width, 
+    height = 10, 
+    width = 10, 
     units = "in",
     dpi = 300
   )
@@ -328,7 +314,9 @@ for (s in 1:length(species)) {
   brks <- unique(c(brks, cap)) # append cap
   labs <- scales::number_format(accuracy = 0.01)(brks)
   
-  p = ggplot(pdat, aes(longitude, latitude)) +
+  p = pdat %>% 
+    filter(island == "Wake") %>% 
+    ggplot(aes(longitude, latitude)) +
     geom_point(aes(size = density_c, fill = density_c),
                shape = 21, alpha = 0.6, colour = "grey25") +
     scale_size_area(
@@ -346,6 +334,7 @@ for (s in 1:length(species)) {
       guide = "legend"
     ) + 
     facet_wrap(~ island, scales = "free") +
+    ggtitle(species[s]) + 
     scale_x_continuous(n.breaks = 3, labels = label_number(accuracy = 0.1)) +
     scale_y_continuous(n.breaks = 3, labels = label_number(accuracy = 0.1)) +
     theme(
@@ -363,20 +352,18 @@ for (s in 1:length(species)) {
   dynamic_width  <- (x_range * scale_factor * 3) + 2 
   
   ggsave(
-    filename = paste0("output/plot/map_c_", species[s], "_", var, "_", region, ".png"),
+    filename = paste0("output/plot/map_c_", species[s], "_", var, "_Wake.png"),
     plot = p,
-    height = dynamic_height, 
-    width = dynamic_width, 
+    height = 10, 
+    width = 10, 
     units = "in",
     dpi = 300
   )
   
   p = df %>% 
-    filter(density > 0) %>%
-    mutate(longitude = round(longitude, 1),
-           latitude = round(latitude, 1)) %>%
     group_by(method, longitude, latitude, year) %>%
-    summarise(density = mean(density)) %>%
+     summarise(density = mean(density), .groups = "drop") %>%
+    mutate(density = pmin(density, quantile(density, 0.99, na.rm = TRUE))) %>%
     ggplot(aes(longitude, latitude)) + 
     geom_point(aes(size = density, fill = density), shape = 21, alpha = 0.5) +
     facet_grid(method ~ year) +
@@ -394,7 +381,7 @@ for (s in 1:length(species)) {
           legend.background = element_rect(fill = "transparent", colour = NA),
           legend.box.background = element_rect(fill = "transparent", colour = NA))
   
-  ggsave(p, ,file = paste0("output/plot/map_d_", species[s], "_", var, "_", region, ".png"), height = 8, width = 10, units = "in")
+  ggsave(p, ,file = paste0("output/plot/map_d_", species[s], "_", var, "_Wake.png"), height = 8, width = 10, units = "in")
   
   if(var == "abund") unit = expression("Individuals (n) per 100" ~ m^2~"")
   if(var == "biom") unit = expression("Biomass (g) per 100" ~ m^2~"")
@@ -497,6 +484,6 @@ for (s in 1:length(species)) {
     scale_x_discrete(limits = unique(dfi$year)) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   
-  ggsave(p, file = paste0("output/plot/ts_c_", species[s], "_", var, "_", region, ".png"), height = 8, width = 10, units = "in")
+  ggsave(p, file = paste0("output/plot/ts_c_", species[s], "_", var, "_", region, ".png"), height = 5, width = 8, units = "in")
   
 }
