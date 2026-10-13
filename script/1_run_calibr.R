@@ -66,7 +66,7 @@ spc_calibr = function(var, region, model){
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
   
   # stationary point count data
-  spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region, ".rds")) %>% 
+  spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092024.", region, ".rds")) %>% 
     group_by(SITEVISITID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_) %>% 
     summarise(DENSITY = sum(!!sym(paste0(var, ".site")))) %>% 
     ungroup() %>%
