@@ -13,7 +13,7 @@ rm(list = ls())
 
 var = c("abund", "biom")[1]
 
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
+region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[5]
 
 species = c(
   "ACLI", #1
@@ -59,7 +59,7 @@ method_labs <- c(
   nSPC_BLT_TOW = "Calibrated composite"
 )
 
-theme_pub <- theme_minimal(base_size = 15) +
+theme_pub <- theme_minimal(base_size = 12) +
   theme(
     plot.title = element_text(face = "bold", size = 18, margin = margin(b = 4)),
     plot.subtitle = element_text(size = 11.5, colour = "grey30", lineheight = 1.15, margin = margin(b = 10)),
