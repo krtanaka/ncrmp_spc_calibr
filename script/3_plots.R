@@ -157,14 +157,14 @@ for (s in 1:length(species)) {
         mutate(DENSITY = 0, PRESENCE = 0)
     }
     
-    spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092024.", region[r], ".rds")) %>%
+    spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region[r], ".rds")) %>%
       filter(SPECIES == species[s]) %>%
       group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>%
       summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>%
       mutate(PRESENCE = as.integer(DENSITY > 0))
     
     if (dim(spc)[1] == 0) {
-      spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092024.", region[r], ".rds")) %>%
+      spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region[r], ".rds")) %>%
         group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE) %>%
         summarise(SPECIES = species[s]) %>%
         mutate(DENSITY = 0, PRESENCE = 0)
