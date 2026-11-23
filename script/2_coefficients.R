@@ -35,6 +35,7 @@ rm(list = ls())
 # OPUE.CAL: Observation Per Unit Effort obtained by multiplying calibrated prob. of sighting and abundance (PRES.CAL x POS.CAL) in provided data set.
 
 folders <- list.dirs(path = "output", full.names = T, recursive = F)
+folders <- folders[grepl("^spc_(belt|tow)_", basename(folders))]
 
 read_summary_table <- function(folder_path) {
   file_path <- file.path(folder_path, "summary_table.csv")
@@ -49,6 +50,9 @@ read_summary_table <- function(folder_path) {
 
 df_list <- lapply(folders, read_summary_table)
 names(df_list) <- basename(folders)
+all_coefficients <- bind_rows(df_list, .id = "folder") %>%
+  separate(folder, into = c("spc", "belt_tow", "var", "region", "model"), sep = "_") %>%
+  rename_all(tolower)
 
 species = c(
   "APXA",
@@ -68,35 +72,44 @@ for (s in 1:length(species)) {
   
   # s = 11
   
-  p1 <- bind_rows(df_list, .id = "folder")  %>% 
-    separate(folder, into = c("spc", "belt_tow", "var", "region", "model"), sep = "_") %>%
-    rename_all(tolower) %>% 
-    filter(group == species[s], model == "GLM", method != "1_nSPC") %>%
+  species_coefficients <- all_coefficients %>%
+    filter(group == species[s], model == "GLM", method != "1_nSPC")
+  pres_coefficients <- species_coefficients %>%
+    filter(is.finite(gcf.pres))
+  pos_coefficients <- species_coefficients %>%
+    filter(is.finite(gcf.pos))
+
+  if (!nrow(pres_coefficients) || !nrow(pos_coefficients)) {
+    message("Skipping ", species[s],
+            ": no finite presence and positive-only coefficients.")
+    next
+  }
+
+  p1 <- pres_coefficients %>%
     ggplot(aes(region, gcf.pres, color = var)) +
     geom_point(position = position_dodge(width = 0.3), size = 2) +
-    geom_errorbar(aes(ymin = gcf.pres_2.5, ymax = gcf.pres_95), 
-                  position = position_dodge(width = 0.3), width = 0, show.legend = F) +
+    geom_errorbar(aes(ymin = gcf.pres_2.5, ymax = gcf.pres_95),
+                  position = position_dodge(width = 0.3), width = 0,
+                  show.legend = FALSE) +
     facet_wrap(~belt_tow, scales = "free") + 
     scale_color_discrete(species[s]) + 
     labs(x = "", y = "Gear calibration factor for presence-absence data") + 
     theme(legend.position = "top")
   
-  p2 <- bind_rows(df_list, .id = "folder")  %>% 
-    separate(folder, into = c("spc", "belt_tow", "var", "region", "model"), sep = "_") %>%
-    rename_all(tolower) %>% 
-    filter(group == species[s], model == "GLM", method != "1_nSPC") %>%
+  p2 <- pos_coefficients %>%
     ggplot(aes(region, gcf.pos, color = var)) +
     geom_point(position = position_dodge(width = 0.3), size = 2, show.legend = F) +
-    geom_errorbar(aes(ymin = gcf.pos_2.5, ymax = gcf.pos_95), 
-                  position = position_dodge(width = 0.3), width = 0, show.legend = F) +
+    geom_errorbar(aes(ymin = gcf.pos_2.5, ymax = gcf.pos_95),
+                  position = position_dodge(width = 0.3), width = 0,
+                  show.legend = FALSE) +
     facet_wrap(~belt_tow, scales = "free") + 
     scale_color_discrete(species[s]) + 
     labs(x = "", y = "Gear calibration factor for positive-only data")
   
-  p1 / p2
+  combined <- p1 / p2
   
-  # ggsave(last_plot(),file = paste0("output/plot/coef_", species[s], ".pdf"), height = 10, width = 10)
-  ggsave(last_plot(),file = paste0("output/plot/coef_", species[s], ".png"), height = 10, width = 10, units = "in")
+  ggsave(paste0("output/plot/coef_", species[s], ".png"),
+         plot = combined, height = 10, width = 10, units = "in")
   
 }
 

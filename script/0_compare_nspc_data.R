@@ -1,29 +1,45 @@
-# Run from the repository root after 0_prep_nspc_data.R.
-# Site totals sum all stored species, size bins, and depth rows, matching
-# the site-level aggregation in 1_run_calibr.R.
+# Compare the legacy IUN input with the updated IUN site summaries.
+# Run from the repository root.
 library(data.table)
 library(ggplot2)
 
+source("script/nspc_summary.R")
+
 regions <- c("MARIAN", "MHI", "NWHI", "PRIAs", "SAMOA")
-versions <- c("Previous (2009-2022)" = "20092022",
-              "Updated (2009-2024)" = "20092024")
+versions <- c("Previous (2009-2022)", "Updated (2008-2026; IUN)")
 metrics <- c(abund = "Abundance (fish/m2)", biom = "Biomass (g/m2)")
 summaries <- list()
 
 for (region in regions) {
+  updated <- read_nspc_summary(
+    "IUN", region,
+    columns = c("SITEVISITID", "OBS_YEAR", "DENSITY_M2", "BIOMASS_G_M2")
+  )
+
   for (metric in names(metrics)) {
-    for (version in names(versions)) {
-      path <- sprintf("data/nSPC.site.%s.size.%s.%s.rds",
-                      metric, versions[[version]], region)
-      if (!file.exists(path)) stop("Missing input: ", path)
-      message("Summarizing ", path)
-      dat <- as.data.table(readRDS(path))
-      value_col <- paste0(metric, ".site")
+    for (version in versions) {
+      if (version == versions[1]) {
+        path <- sprintf("data/nSPC.site.%s.size.20092022.%s.rds",
+                        metric, region)
+        if (!file.exists(path)) stop("Missing input: ", path)
+        message("Summarizing ", path)
+        dat <- as.data.table(readRDS(path))
+        value_col <- paste0(metric, ".site")
+        input_label <- path
+      } else {
+        message("Summarizing IUN Parquet summary for ", region)
+        dat <- as.data.table(updated)
+        value_col <- if (metric == "abund") "DENSITY_M2" else "BIOMASS_G_M2"
+        input_label <- "IUN Parquet summary"
+      }
+
       required <- c("SITEVISITID", "OBS_YEAR", value_col)
-      if (!all(required %in% names(dat))) stop("Missing columns in: ", path)
+      if (!all(required %in% names(dat))) {
+        stop("Missing required columns in: ", input_label)
+      }
       if (anyNA(dat$SITEVISITID) || anyNA(dat$OBS_YEAR) ||
           any(!is.finite(dat[[value_col]])) || any(dat[[value_col]] < 0)) {
-        stop("Missing site/year or invalid density values in: ", path)
+        stop("Missing site/year or invalid density values in: ", input_label)
       }
       site_totals <- dat[, .(density = sum(get(value_col))),
                          by = .(SITEVISITID, OBS_YEAR)]
@@ -39,7 +55,7 @@ for (region in regions) {
 }
 
 comparison <- rbindlist(summaries)
-comparison[, version := factor(version, levels = names(versions))]
+comparison[, version := factor(version, levels = versions)]
 comparison[, region := factor(region, levels = regions)]
 comparison[, metric := factor(metric, levels = unname(metrics))]
 setorder(comparison, metric, region, version, OBS_YEAR)
@@ -53,13 +69,14 @@ plot <- ggplot(comparison,
   scale_color_manual(values = c("#555555", "#0072B2")) +
   scale_linetype_manual(values = c("dashed", "solid")) +
   scale_shape_manual(values = c(1, 16)) +
-  scale_x_continuous(breaks = c(2009, 2014, 2019, 2024)) +
+  scale_x_continuous(breaks = c(2008, 2013, 2018, 2023, 2026)) +
   labs(title = "nSPC: previous vs. updated datasets",
-       subtitle = "Annual mean of all-species site totals; dotted line marks the newly added years",
+       subtitle = "Annual mean of all-species site totals; dotted line marks years after the previous dataset",
        x = "Survey year", y = "Mean site density",
        color = NULL, linetype = NULL, shape = NULL,
-       caption = paste("Totals sum stored species, size-bin and depth rows (as in calibration).",
-                       "Overlapping years may differ because the raw source was updated.",
+       caption = paste("Previous totals sum stored species, size-bin and depth rows.",
+                       "Updated totals use the supplied species-level site densities.",
+                       "Overlapping years may differ because the source was reprocessed.",
                        "Panel y-axis scales differ.")) +
   theme_bw(base_size = 11) +
   theme(legend.position = "bottom",

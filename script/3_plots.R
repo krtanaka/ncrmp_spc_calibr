@@ -11,6 +11,8 @@ library(scales)
 
 rm(list = ls())
 
+source("script/nspc_summary.R")
+
 var = c("abund", "biom")[1]
 
 region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[5]
@@ -157,17 +159,24 @@ for (s in 1:length(species)) {
         mutate(DENSITY = 0, PRESENCE = 0)
     }
     
-    spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region[r], ".rds")) %>%
-      filter(SPECIES == species[s]) %>%
-      group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE, SPECIES) %>%
-      summarise(DENSITY = sum(!!sym(paste0(var, ".site"))), .groups = "drop") %>%
-      mutate(PRESENCE = as.integer(DENSITY > 0))
+    spc_density <- if (var == "abund") "DENSITY_M2" else "BIOMASS_G_M2"
+    spc_data <- read_nspc_summary(
+      "I", region[r],
+      columns = c("ISLAND", "METHOD", "DATE_", "LATITUDE", "LONGITUDE",
+                  "FISH_GROUP", "MEAN_DEPTH_M", "PRESENT", spc_density)
+    )
+    spc <- spc_data %>%
+      filter(FISH_GROUP == species[s]) %>%
+      transmute(
+        ISLAND, DEPTH = MEAN_DEPTH_M, METHOD, DATE_, LATITUDE, LONGITUDE,
+        SPECIES = FISH_GROUP, DENSITY = .data[[spc_density]],
+        PRESENCE = as.integer(PRESENT)
+      )
     
     if (dim(spc)[1] == 0) {
-      spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092022.", region[r], ".rds")) %>%
-        group_by(ISLAND, DEPTH, METHOD, DATE_, LATITUDE, LONGITUDE) %>%
-        summarise(SPECIES = species[s]) %>%
-        mutate(DENSITY = 0, PRESENCE = 0)
+      spc <- spc_data %>%
+        distinct(ISLAND, DEPTH = MEAN_DEPTH_M, METHOD, DATE_, LATITUDE, LONGITUDE) %>%
+        mutate(SPECIES = species[s], DENSITY = 0, PRESENCE = 0)
     }
     
     df_i = rbind(spc, belt, tow)

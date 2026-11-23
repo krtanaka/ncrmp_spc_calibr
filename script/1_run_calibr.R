@@ -15,11 +15,14 @@ library(ggplot2)
 
 rm(list = ls())
 
-spc_calibr = function(var, region, model){
+source("script/nspc_summary.R")
 
-  var = c("abund", "biom")[1]
-  region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[1]
-  model = c("GLM", "GLMM")[1]
+spc_calibr = function(var, region, model) {
+  if (!var %in% c("abund", "biom")) stop("Unsupported metric: ", var)
+  if (!region %in% c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")) {
+    stop("Unsupported region: ", region)
+  }
+  if (!model %in% c("GLM", "GLMM")) stop("Unsupported model: ", model)
   
   # belt transect data
   belt <- readRDS(paste0("data/belt.site.", var, ".size.20002009.", region, ".rds")) %>%
@@ -65,17 +68,21 @@ spc_calibr = function(var, region, model){
     ungroup() %>% 
     select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
   
-  # stationary point count data
-  spc = readRDS(paste0("data/nSPC.site.", var, ".size.20092024.", region, ".rds")) %>% 
-    group_by(SITEVISITID, SPECIES, METHOD, OBS_YEAR, ISLAND, REEF_ZONE, DEPTH_BIN, LATITUDE, LONGITUDE, DATE_) %>% 
-    summarise(DENSITY = sum(!!sym(paste0(var, ".site")))) %>% 
-    ungroup() %>%
-    mutate(
-      PRESENCE = as.integer(DENSITY > 0),
+  # Use the I-only summary because it is the calibration reference dataset.
+  spc_density <- if (var == "abund") "DENSITY_M2" else "BIOMASS_G_M2"
+  spc <- read_nspc_summary(
+    "I", region,
+    columns = c("METHOD", "ISLAND", "REEF_ZONE", "DEPTH_BIN", "DATE_",
+                "LATITUDE", "LONGITUDE", "FISH_GROUP", "PRESENT",
+                spc_density)
+  ) %>%
+    transmute(
+      DATE_, LATITUDE, LONGITUDE,
       BLOCK = paste(ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
-      # BLOCK = paste(OBS_YEAR, ISLAND, DEPTH_BIN, REEF_ZONE, sep = "."),
-      GROUP = SPECIES) %>% 
-    select(DATE_, LATITUDE, LONGITUDE, BLOCK, GROUP, METHOD, DENSITY, PRESENCE)
+      GROUP = FISH_GROUP, METHOD,
+      DENSITY = .data[[spc_density]],
+      PRESENCE = as.numeric(PRESENT)
+    )
   
   calibr = c("spc_belt", "spc_tow")
   
