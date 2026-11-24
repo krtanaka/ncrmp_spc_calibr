@@ -17,7 +17,105 @@ rm(list = ls())
 
 source("script/nspc_summary.R")
 
-spc_calibr = function(var, region, model) {
+calibr_args <- commandArgs(trailingOnly = TRUE)
+if (length(calibr_args) > 5L) {
+  stop("Usage: 1_run_calibr.R [GROUP [METRIC [REGION [MODEL [METHOD]]]]]",
+       call. = FALSE)
+}
+calibr_groups <- if (length(calibr_args)) calibr_args[[1]] else NULL
+metric_filter <- if (length(calibr_args) >= 2L) calibr_args[[2]] else NULL
+region_filter <- if (length(calibr_args) >= 3L) calibr_args[[3]] else NULL
+model_filter <- if (length(calibr_args) >= 4L) calibr_args[[4]] else NULL
+method_filter <- if (length(calibr_args) >= 5L) calibr_args[[5]] else NULL
+output_root <- Sys.getenv("CALIBR_OUTPUT_DIR", unset = "output")
+if (!dir.exists(output_root)) {
+  stop("Calibration output directory does not exist: ", output_root, call. = FALSE)
+}
+if (!is.null(metric_filter) && !metric_filter %in% c("abund", "biom")) {
+  stop("Unsupported metric: ", metric_filter, call. = FALSE)
+}
+if (!is.null(region_filter) &&
+    !region_filter %in% c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")) {
+  stop("Unsupported region: ", region_filter, call. = FALSE)
+}
+if (!is.null(model_filter) && !model_filter %in% c("GLM", "GLMM")) {
+  stop("Unsupported model: ", model_filter, call. = FALSE)
+}
+if (!is.null(method_filter) && !method_filter %in% c("belt", "tow")) {
+  stop("Unsupported method: ", method_filter, call. = FALSE)
+}
+if (is.null(model_filter) || model_filter == "GLMM") {
+  glmm_source <- paste(deparse(body(getFromNamespace("gcf_glmm", "Calibr"))),
+                       collapse = " ")
+  if (grepl('gsub(paste0(":1_",', glmm_source, fixed = TRUE)) {
+    stop("Installed Calibr has a GLMM group-name bug; see README for the fix.",
+         call. = FALSE)
+  }
+}
+
+merge_calibr_exports <- function(results, outdir, groups) {
+  temp_dir <- tempfile("calibr-export-")
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE), add = TRUE)
+  export_results(results, outdir = temp_dir)
+
+  for (filename in c("summary_table.csv", "REP_summary.csv")) {
+    old_path <- file.path(outdir, filename)
+    new_path <- file.path(temp_dir, filename)
+    if (!file.exists(old_path) || !file.exists(new_path)) {
+      stop("Missing calibration export: ", old_path, " or ", new_path,
+           call. = FALSE)
+    }
+
+    old_lines <- readLines(old_path)
+    new_lines <- readLines(new_path)
+    if (!identical(old_lines[1], new_lines[1])) {
+      stop("Mismatched headers in calibration export: ", filename,
+           call. = FALSE)
+    }
+
+    for (group in groups) {
+      old_rows <- which(startsWith(old_lines, paste0('"', group, '",')))
+      new_rows <- which(startsWith(new_lines, paste0('"', group, '",')))
+      if (!length(old_rows) || !length(new_rows)) {
+        stop("Missing calibration rows for ", group, " in ", filename,
+             call. = FALSE)
+      }
+      if (length(old_rows) == length(new_rows)) {
+        old_lines[old_rows] <- new_lines[new_rows]
+      } else {
+        first_old_row <- min(old_rows)
+        insert_at <- if (first_old_row > 1L) {
+          sum(!startsWith(old_lines[seq_len(first_old_row - 1L)],
+                          paste0('"', group, '",')))
+        } else {
+          0L
+        }
+        old_lines <- old_lines[-old_rows]
+        old_lines <- append(old_lines, new_lines[new_rows], after = insert_at)
+      }
+    }
+    writeLines(old_lines, old_path, useBytes = TRUE)
+  }
+
+  old_path <- file.path(outdir, "reeffish_grouped.Rds")
+  new_path <- file.path(temp_dir, "reeffish_grouped.Rds")
+  if (!file.exists(old_path) || !file.exists(new_path)) {
+    stop("Missing grouped calibration export: ", old_path, " or ", new_path,
+         call. = FALSE)
+  }
+  old_results <- readRDS(old_path)
+  new_results <- readRDS(new_path)
+  for (group in groups) {
+    if (is.null(new_results[[group]])) {
+      stop("Missing grouped calibration results for ", group, call. = FALSE)
+    }
+    old_results[[group]] <- new_results[[group]]
+  }
+  saveRDS(old_results, old_path)
+}
+
+spc_calibr = function(var, region, model, groups = calibr_groups) {
   if (!var %in% c("abund", "biom")) stop("Unsupported metric: ", var)
   if (!region %in% c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")) {
     stop("Unsupported region: ", region)
@@ -85,6 +183,9 @@ spc_calibr = function(var, region, model) {
     )
   
   calibr = c("spc_belt", "spc_tow")
+  if (!is.null(method_filter)) {
+    calibr <- paste0("spc_", method_filter)
+  }
   
   for (c in 1:length(calibr)) {
     
@@ -92,6 +193,14 @@ spc_calibr = function(var, region, model) {
     
     if (calibr[c] == "spc_belt") set = rbind(spc, belt)
     if (calibr[c] == "spc_tow") set = rbind(spc, tow)
+
+    if (!is.null(groups)) {
+      set <- set %>% filter(GROUP %in% groups)
+      if (!nrow(set)) {
+        stop("No calibration records found for: ",
+             paste(groups, collapse = ", "), call. = FALSE)
+      }
+    }
     
     set$REP <- sprintf("%04d", as.numeric(factor(paste(set$LATITUDE, set$LONGITUDE, set$DATE_, sep = "_"))))
     set$REP = as.integer(set$REP)
@@ -102,34 +211,46 @@ spc_calibr = function(var, region, model) {
     
     results <- run_calibr(set, std_method = "nSPC", stat_model = model)
     
-    if(!file.exists(paste0("output/", calibr[c], "_", var, "_", region, "_", model))) dir.create(paste0("output/", calibr[c], "_", var, "_", region, "_", model))
-    export_results(results, outdir = paste0("output/", calibr[c], "_", var, "_", region, "_", model))
+    outdir <- file.path(output_root, paste0(calibr[c], "_", var, "_", region, "_", model))
+    if (!file.exists(outdir)) dir.create(outdir)
+    if (is.null(groups)) {
+      export_results(results, outdir = outdir)
+    } else {
+      merge_calibr_exports(results, outdir, groups)
+    }
     
   }
 
 }
 
-spc_calibr("abund", "MHI", "GLM")
-spc_calibr("abund", "MHI", "GLMM")
-spc_calibr("biom", "MHI", "GLM")
-spc_calibr("biom", "MHI", "GLMM")
+run_calibration <- function(var, region, model) {
+  if (!is.null(metric_filter) && var != metric_filter) return(invisible(NULL))
+  if (!is.null(region_filter) && region != region_filter) return(invisible(NULL))
+  if (!is.null(model_filter) && model != model_filter) return(invisible(NULL))
+  spc_calibr(var, region, model)
+}
 
-spc_calibr("abund", "SAMOA", "GLM")
-spc_calibr("abund", "SAMOA", "GLMM")
-spc_calibr("biom", "SAMOA", "GLM")
-spc_calibr("biom", "SAMOA", "GLMM")
+run_calibration("abund", "MHI", "GLM")
+run_calibration("abund", "MHI", "GLMM")
+run_calibration("biom", "MHI", "GLM")
+run_calibration("biom", "MHI", "GLMM")
 
-spc_calibr("abund", "MARIAN", "GLM")
-spc_calibr("abund", "MARIAN", "GLMM")
-spc_calibr("biom", "MARIAN", "GLM")
-spc_calibr("biom", "MARIAN", "GLMM")
+run_calibration("abund", "SAMOA", "GLM")
+run_calibration("abund", "SAMOA", "GLMM")
+run_calibration("biom", "SAMOA", "GLM")
+run_calibration("biom", "SAMOA", "GLMM")
 
-spc_calibr("abund", "NWHI", "GLM")
-spc_calibr("abund", "NWHI", "GLMM")
-spc_calibr("biom", "NWHI", "GLM")
-spc_calibr("biom", "NWHI", "GLMM")
+run_calibration("abund", "MARIAN", "GLM")
+run_calibration("abund", "MARIAN", "GLMM")
+run_calibration("biom", "MARIAN", "GLM")
+run_calibration("biom", "MARIAN", "GLMM")
 
-spc_calibr("abund", "PRIAs", "GLM")
-spc_calibr("abund", "PRIAs", "GLMM")
-spc_calibr("biom", "PRIAs", "GLM")
-spc_calibr("biom", "PRIAs", "GLMM")
+run_calibration("abund", "NWHI", "GLM")
+run_calibration("abund", "NWHI", "GLMM")
+run_calibration("biom", "NWHI", "GLM")
+run_calibration("biom", "NWHI", "GLMM")
+
+run_calibration("abund", "PRIAs", "GLM")
+run_calibration("abund", "PRIAs", "GLMM")
+run_calibration("biom", "PRIAs", "GLM")
+run_calibration("biom", "PRIAs", "GLMM")

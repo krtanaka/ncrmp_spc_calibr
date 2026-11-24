@@ -1,0 +1,15 @@
+diff --git a/R/gcf_glmm.R b/R/gcf_glmm.R
+index 7f6acea..36f285b 100644
+--- a/R/gcf_glmm.R
++++ b/R/gcf_glmm.R
+@@ -135,7 +135,7 @@ gcf_glmm <- function (ORIG, std_method, min_obs=10, n_sample=5) {
+   row.names(Final.pres)[1] <- "Global"
+-  row.names(Final.pres)[2:(num_species+1)] <- gsub(paste0(":1_",std_method),"",row.names(Final.pres)[2:(num_species+1)])
++  row.names(Final.pres)[2:(num_species+1)] <- sub(paste0(":",std_method),"",row.names(Final.pres)[2:(num_species+1)], fixed=TRUE)
+   row.names(Final.pos)[1] <- "Global"
+-  row.names(Final.pos)[2:(num_species+1)] <- gsub(paste0(":1_",std_method),"",row.names(Final.pos)[2:(num_species+1)])
++  row.names(Final.pos)[2:(num_species+1)] <- sub(paste0(":",std_method),"",row.names(Final.pos)[2:(num_species+1)], fixed=TRUE)
+-
++
+   # Sum global and species-specific effects
+   for(i in 2:(num_species+1)){

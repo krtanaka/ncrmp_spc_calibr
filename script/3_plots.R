@@ -8,16 +8,31 @@ library(ggh4x)
 library(classInt)
 library(viridis)
 library(scales)
+library(patchwork)
 
 rm(list = ls())
 
 source("script/nspc_summary.R")
 
-var = c("abund", "biom")[1]
+plot_args <- commandArgs(trailingOnly = TRUE)
+var <- if (length(plot_args) >= 1L) plot_args[[1]] else "abund"
+region <- if (length(plot_args) >= 2L) plot_args[[2]] else "SAMOA"
+plot_selection <- if (length(plot_args) >= 3L) plot_args[[3]] else "all"
 
-region = c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")[5]
+if (length(plot_args) > 4L) {
+  stop("Usage: 3_plots.R [METRIC [REGION [all|maps [SPECIES]]]]", call. = FALSE)
+}
+if (!var %in% c("abund", "biom")) {
+  stop("Metric must be 'abund' or 'biom'.", call. = FALSE)
+}
+if (!region %in% c("MHI", "MARIAN", "NWHI", "PRIAs", "SAMOA")) {
+  stop("Unsupported region: ", region, call. = FALSE)
+}
+if (!plot_selection %in% c("all", "maps")) {
+  stop("Unsupported plot selection: ", plot_selection, call. = FALSE)
+}
 
-species = c(
+available_species = c(
   "ACLI", #1
   "ACNC", #2
   "APVI", #3
@@ -36,7 +51,11 @@ species = c(
   "SCLY", #16
   "SCSC", #17
   "VALO"  #18
-)[3]
+)
+species <- if (length(plot_args) >= 4L) plot_args[[4]] else "APVI"
+if (!species %in% available_species) {
+  stop("Unsupported species: ", species, call. = FALSE)
+}
 
 # -------------------------------------------------------------------------
 # Plot helpers
@@ -83,12 +102,13 @@ prep_map_bins <- function(pdat) {
   cap <- quantile(pdat$density, 0.99, na.rm = TRUE)
   pdat <- pdat %>% mutate(density_c = pmin(density, cap))
   brks <- signif(quantile(pdat$density_c, c(.10, .25, .50, .75, .90, .98), na.rm = TRUE), 2)
-  brks <- sort(unique(c(0, brks, cap)))
+  brks <- sort(unique(c(0, pmin(brks, cap), cap)))
   if (length(brks) < 3) brks <- sort(unique(c(0, pretty(c(0, cap), n = 4), cap)))
-  
+  accuracy <- 10^floor(log10(min(diff(brks))))
+
   bin_labs <- paste0(
-    scales::number(brks[-length(brks)], accuracy = 0.01), "–",
-    scales::number(brks[-1], accuracy = 0.01)
+    scales::number(brks[-length(brks)], accuracy = accuracy), "–",
+    scales::number(brks[-1], accuracy = accuracy)
   )
   
   pdat$density_bin <- cut(pdat$density_c, breaks = brks, include.lowest = TRUE, labels = bin_labs)
@@ -108,9 +128,161 @@ facet_dims <- function(n_panels, ncol, panel_w = 3.7, panel_h = 2.8) {
   c(width = max(6, 2 + panel_w * ncol), height = max(4.8, 1.8 + panel_h * nrow))
 }
 
+longitude_labels <- function(x) {
+  values <- ifelse(x > 180, 360 - x, x)
+  paste0(scales::label_number()(values), ifelse(x > 180, "°W", "°E"))
+}
+
+coast_path <- "data/ne_10m_land.zip"
+if (!file.exists(coast_path)) {
+  stop("Missing Natural Earth coastline data: ", coast_path, call. = FALSE)
+}
+coast <- sf::st_geometry(sf::st_read(
+  paste0("/vsizip/", normalizePath(coast_path, winslash = "/", mustWork = TRUE),
+         "/ne_10m_land.shp"), quiet = TRUE
+))
+coast_for_extent <- function(xlim, ylim) {
+  previous_s2 <- sf::sf_use_s2()
+  on.exit(suppressMessages(sf::sf_use_s2(previous_s2)))
+  suppressMessages(sf::sf_use_s2(FALSE))
+  intervals <- list(c(max(0, xlim[1]), min(180, xlim[2])),
+                    c(max(180, xlim[1]), min(360, xlim[2])))
+  pieces <- lapply(seq_along(intervals), function(i) {
+    interval <- intervals[[i]]
+    if (interval[1] >= interval[2]) return(NULL)
+    if (i == 2L) interval <- interval - 360
+    bbox <- sf::st_bbox(c(xmin = interval[1], ymin = ylim[1],
+                          xmax = interval[2], ymax = ylim[2]),
+                        crs = sf::st_crs(4326))
+    clipped <- suppressMessages(sf::st_crop(coast, bbox))
+    if (!length(clipped)) return(NULL)
+    polygons <- if (inherits(clipped, c("sfc_GEOMETRY", "sfc_GEOMETRYCOLLECTION"))) {
+      sf::st_collection_extract(clipped, "POLYGON")
+    } else {
+      clipped
+    }
+    if (!length(polygons)) return(NULL)
+    polygons <- sf::st_cast(polygons, "MULTIPOLYGON")
+    coords <- as.data.frame(sf::st_coordinates(polygons))
+    coords %>% transmute(
+      longitude = ifelse(X < 0, X + 360, X), latitude = Y,
+      group = paste(i, L3, L2, sep = "-"),
+      subgroup = paste(i, L3, L2, L1, sep = "-")
+    )
+  })
+  if (all(vapply(pieces, is.null, logical(1)))) {
+    return(data.frame(longitude = numeric(), latitude = numeric(),
+                      group = character(), subgroup = character()))
+  }
+  bind_rows(pieces)
+}
+
+island_satellite <- function(xlim, ylim) {
+  if (length(xlim) != 2 || length(ylim) != 2 ||
+      any(!is.finite(c(xlim, ylim))) || xlim[1] >= xlim[2] || ylim[1] >= ylim[2] ||
+      xlim[1] < 0 || xlim[2] > 360 || ylim[1] < -90 || ylim[2] > 90) {
+    stop("Island map extent is outside satellite imagery coverage.", call. = FALSE)
+  }
+  cols <- seq(floor(xlim[1]), ceiling(xlim[2]) - 1)
+  rows <- seq(floor(ylim[1]), ceiling(ylim[2]) - 1)
+  if (length(cols) * length(rows) > 64) {
+    stop("Island map extent requires more than 64 satellite imagery tiles.", call. = FALSE)
+  }
+  cache_dir <- file.path("data", ".eox_2025_cache")
+  if (!dir.exists(cache_dir) && !dir.create(cache_dir, recursive = TRUE)) {
+    stop("Cannot create satellite imagery cache: ", cache_dir, call. = FALSE)
+  }
+  read_tile <- function(path) {
+    signature <- readBin(path, "raw", n = 8)
+    if (identical(signature[1:3], as.raw(c(0xff, 0xd8, 0xff)))) {
+      image <- jpeg::readJPEG(path, native = TRUE)
+    } else if (identical(signature, as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)))) {
+      image <- png::readPNG(path, native = TRUE)
+    } else {
+      stop("Invalid satellite imagery response: ", path, call. = FALSE)
+    }
+    if (length(dim(image)) != 2L || nrow(image) != ncol(image) ||
+        !nrow(image) %in% c(256L, 512L, 1024L, 2048L)) {
+      stop("Invalid satellite imagery tile dimensions: ", path, call. = FALSE)
+    }
+    image
+  }
+  load_tile <- function(lon, lat) {
+    path <- file.path(cache_dir, sprintf("lon%d_lat%d.tile", lon, lat))
+    if (!file.exists(path)) {
+      signed_lon <- if (lon >= 180) lon - 360 else lon
+      tmp <- tempfile(tmpdir = cache_dir, fileext = ".jpg")
+      on.exit(unlink(tmp), add = TRUE)
+      for (resolution in c(2048L, 1024L, 512L, 256L)) {
+        url <- sprintf(
+          paste0("https://tiles.maps.eox.at/wms?service=WMS&version=1.1.1&request=GetMap",
+                 "&layers=s2cloudless-2025&styles=&format=image%%2Fjpeg&srs=EPSG%%3A4326",
+                 "&bbox=%d,%d,%d,%d&width=%d&height=%d"),
+          signed_lon, lat, signed_lon + 1, lat + 1, resolution, resolution
+        )
+        response <- curl::curl_fetch_disk(url, tmp)
+        if (response$status_code == 200L) break
+        no_tiles <- response$status_code == 404L &&
+          grepl("x-mapcache-error: no tiles containing image data could be retrieved to create map",
+                tolower(rawToChar(response$headers)), fixed = TRUE)
+        if (!no_tiles || resolution == 256L) {
+          stop("Could not download satellite imagery tile ", lon, ", ", lat,
+               " (HTTP ", response$status_code, ").", call. = FALSE)
+        }
+      }
+      image <- read_tile(tmp)
+      if (nrow(image) != resolution) {
+        stop("Unexpected satellite imagery tile dimensions: ", tmp, call. = FALSE)
+      }
+      if (!file.rename(tmp, path)) stop("Cannot save satellite imagery tile: ", path, call. = FALSE)
+    } else {
+      image <- read_tile(path)
+    }
+    resolution <- nrow(image)
+    if (resolution < 2048L) {
+      warning(sprintf("Satellite imagery is lower resolution in cell %d, %d.", lon, lat),
+              call. = FALSE)
+    }
+    col_min <- max(0, floor((xlim[1] - lon) * resolution))
+    col_max <- min(resolution, ceiling((xlim[2] - lon) * resolution))
+    row_min <- max(0, floor((lat + 1 - ylim[2]) * resolution))
+    row_max <- min(resolution, ceiling((lat + 1 - ylim[1]) * resolution))
+    # Native rasters are stored row-major, unlike R matrices.
+    cropped <- image[seq.int(col_min + 1, col_max),
+                     seq.int(row_min + 1, row_max), drop = FALSE]
+    dim(cropped) <- c(row_max - row_min, col_max - col_min)
+    if (attr(image, "channels") == 4L && any(bitwShiftR(cropped, 24L) == 0L)) {
+      warning(sprintf("Satellite imagery has missing coverage in cell %d, %d.", lon, lat),
+              call. = FALSE)
+    }
+    class(cropped) <- "nativeRaster"
+    attr(cropped, "channels") <- attr(image, "channels")
+    annotation_raster(
+      cropped, xmin = lon + col_min / resolution, xmax = lon + col_max / resolution,
+      ymin = lat + 1 - row_max / resolution, ymax = lat + 1 - row_min / resolution,
+      interpolate = TRUE
+    )
+  }
+  unlist(lapply(rows, function(lat) lapply(cols, function(lon) load_tile(lon, lat))),
+         recursive = FALSE)
+}
+
 for (s in 1:length(species)) {
-  
-  df = NULL
+
+  if (plot_selection == "maps") {
+    data_path <- paste0("output/calibr_df/calibr_", species[s], "_", var, "_", region, ".RData")
+    if (!file.exists(data_path)) {
+      stop("Missing calibrated data for maps: ", data_path, call. = FALSE)
+    }
+    data_env <- new.env(parent = emptyenv())
+    load(data_path, envir = data_env)
+    if (!exists("df", envir = data_env, inherits = FALSE) ||
+        !all(c("region", "island", "method", "longitude", "latitude", "density", "year") %in% names(data_env$df))) {
+      stop("Invalid calibrated data for maps: ", data_path, call. = FALSE)
+    }
+    df <- data_env$df
+  } else {
+    df = NULL
   
   for (r in 1:length(region)) {
     
@@ -205,7 +377,8 @@ for (s in 1:length(species)) {
            longitude = ifelse(longitude < 0, longitude + 360, longitude),
            density = density * 100)
   
-  save(df, file = paste0("output/calibr_df/calibr_", species[s], "_", var, "_", region, ".RData"))
+    save(df, file = paste0("output/calibr_df/calibr_", species[s], "_", var, "_", region, ".RData"))
+  }
   
   if (var == "abund") unit <- expression("Individuals (n) per 100" ~ m^2)
   if (var == "biom") unit <- expression("Biomass (g) per 100" ~ m^2)
@@ -239,12 +412,19 @@ for (s in 1:length(species)) {
   lon_buffer <- diff(lon_range) * 0.06
   lat_buffer <- diff(lat_range) * 0.08
   n_methods <- length(unique(pdat$method))
-  
+  wide_region <- diff(lon_range) > 2 * diff(lat_range) && n_methods > 1
+  map_cols <- if (wide_region) 1 else n_methods
+  region_coast <- coast_for_extent(
+    c(lon_range[1] - lon_buffer, lon_range[2] + lon_buffer),
+    c(lat_range[1] - lat_buffer, lat_range[2] + lat_buffer)
+  )
+
   p = ggplot(pdat, aes(longitude, latitude)) +
     geom_polygon(
-      data = fortify(maps::map("world2", plot = FALSE, fill = TRUE)),
-      aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group),
-      fill = "grey25", colour = "white", linewidth = 0.25, inherit.aes = FALSE
+      data = region_coast,
+      aes(x = longitude, y = latitude, group = group, subgroup = subgroup),
+      fill = "grey85", colour = "grey60", linewidth = 0.25,
+      rule = "evenodd", inherit.aes = FALSE
     ) +
     geom_point(aes(size = density_bin, fill = density_bin),
                shape = 21, alpha = 0.85, colour = "grey20", stroke = 0.25) +
@@ -254,7 +434,8 @@ for (s in 1:length(species)) {
                                override.aes = list(shape = 21, size = unname(pm$size_vals),
                                                    colour = "grey20", alpha = 0.9)),
            size = "none") +
-    facet_wrap(~method, nrow = 1, labeller = labeller(method = method_labs)) +
+    facet_wrap(~method, ncol = map_cols, labeller = labeller(method = method_labs)) +
+    scale_x_continuous(n.breaks = 3, labels = longitude_labels) +
     coord_equal(xlim = c(lon_range[1] - lon_buffer, lon_range[2] + lon_buffer),
                 ylim = c(lat_range[1] - lat_buffer, lat_range[2] + lat_buffer),
                 expand = FALSE) +
@@ -262,21 +443,31 @@ for (s in 1:length(species)) {
       title = title_text,
       subtitle = paste0(region_text, " | Survey-specific calibrated ", ifelse(var == "abund", "abundance", "biomass"),
                         ", ", year_text, "\n", max_obs_text(pdat$density)),
-      x = expression(Longitude ~ degree * W),
-      y = expression(Latitude ~ degree * N),
-      caption = "BLT and TOW observations standardized to the nSPC reference method. Mean values within 0.1° cells; values above the 99th percentile capped for display."
+      x = "Longitude",
+      y = "Latitude (degrees)",
+      caption = paste("BLT and TOW observations standardized to the nSPC reference method.",
+                      "Mean values within 0.1° cells; values above the 99th percentile capped for display.",
+                      sep = "\n")
     ) +
     theme_pub +
-    theme(legend.position = "right")
-  
-  dims <- facet_dims(n_methods, n_methods, 4.3, 4.1)
+    theme(legend.position = "right", panel.spacing.x = grid::unit(1.5, "lines"),
+          panel.background = element_rect(fill = "#edf5f7", colour = NA))
+
+  map_ratio <- diff(lon_range) / max(diff(lat_range), 0.1)
+  dims <- if (wide_region) {
+    c(width = 11, height = 9)
+  } else if (map_ratio < 1) {
+    c(width = max(8, min(15, 3.5 + n_methods * 4 * map_ratio)), height = 8)
+  } else {
+    facet_dims(n_methods, n_methods, 4.3, 4.1)
+  }
   
   ggsave(
     filename = paste0("output/plot/map_a_", species[s], "_", var, "_", region_tag, ".png"),
     plot = p, height = dims["height"], width = dims["width"],
     units = "in", dpi = 300, bg = "white"
   )
-  
+
   pdat <- df %>%
     filter(density > 0, method == "nSPC_BLT_TOW") %>%
     mutate(longitude = round(longitude, 1), latitude = round(latitude, 1)) %>%
@@ -289,12 +480,16 @@ for (s in 1:length(species)) {
   lat_range <- range(pdat$latitude, na.rm = TRUE)
   lon_buffer <- diff(lon_range) * 0.06
   lat_buffer <- diff(lat_range) * 0.08
+  region_coast <- coast_for_extent(
+    c(lon_range[1] - lon_buffer, lon_range[2] + lon_buffer),
+    c(lat_range[1] - lat_buffer, lat_range[2] + lat_buffer)
+  )
   
   p <- ggplot() +
     geom_polygon(
-      data = fortify(maps::map("world2", plot = FALSE, fill = TRUE)),
-      aes(x = ifelse(long < 0, long + 360, long), y = lat, group = group),
-      fill = "grey25", colour = "white", linewidth = 0.25
+      data = region_coast,
+      aes(x = longitude, y = latitude, group = group, subgroup = subgroup),
+      fill = "grey85", colour = "grey60", linewidth = 0.25, rule = "evenodd"
     ) +
     geom_point(
       data = pdat,
@@ -315,6 +510,7 @@ for (s in 1:length(species)) {
       ),
       size = "none"
     ) +
+    scale_x_continuous(labels = longitude_labels) +
     coord_equal(
       xlim = c(lon_range[1] - lon_buffer, lon_range[2] + lon_buffer),
       ylim = c(lat_range[1] - lat_buffer, lat_range[2] + lat_buffer),
@@ -323,20 +519,22 @@ for (s in 1:length(species)) {
     labs(
       title = title_text,
       subtitle = paste0(
-        region_text, " | Calibrated ", ifelse(var == "abund", "abundance", "biomass"),
-        ", ", year_text, "\n", max_obs_text(pdat$density)
+        region_text, " | Regional overview of calibrated ",
+        ifelse(var == "abund", "abundance", "biomass"), ", ", year_text
       ),
-      x = expression(Longitude ~ degree * W),
-      y = expression(Latitude ~ degree * N),
-      caption = "Calibrated composite: nSPC + belt transect + towed diver. BLT and TOW observations standardized to the nSPC reference method; mean values within 0.1° cells."
+      x = "Longitude",
+      y = "Latitude (degrees)",
+      caption = paste("Calibrated composite: nSPC + belt transect + towed diver.",
+                      "Points show mean positive observations within 0.1° cells, capped at the 99th percentile.",
+                      "The island panels below instead include zero observations and have their own legend.",
+                      sep = "\n")
     ) +
     theme_pub +
     theme(
-      legend.position = c(0.12, 0.15),                            # Coordinates relative to panel (0 to 1)
-      legend.justification = c(0, 0),                            # Anchors legend by its bottom-left corner
-      legend.background = element_rect(fill = alpha("white", 0.8), color = NA), # Semi-transparent white backing
+      legend.position = "right",
       legend.key = element_blank(),
-      legend.margin = margin(4, 6, 4, 6)
+      legend.margin = margin(4, 6, 4, 6),
+      panel.background = element_rect(fill = "#edf5f7", colour = NA)
     )
   
   dx <- diff(lon_range) + 2 * lon_buffer
@@ -345,7 +543,7 @@ for (s in 1:length(species)) {
   
   # Fixed overhead estimates in inches for text, titles, margins, and axis labels
   v_overhead <- 2.2  # Title, subtitle, caption, x-axis label
-  h_overhead <- 1.5  # Y-axis label, tick text, panel margins
+  h_overhead <- 3.5  # Y-axis label, tick text, panel margins, and legend
   
   # Target slide limits (16x9 Widescreen)
   max_w <- 16.0
@@ -366,59 +564,151 @@ for (s in 1:length(species)) {
     map_b_width  <- min(max_w, max(7.0, panel_w + h_overhead))
   }
   
-  ggsave(
-    filename = paste0("output/plot/map_b_", species[s], "_", var, "_", region_tag, ".png"),
-    plot = p, 
-    height = map_b_height, 
-    width = map_b_width,
-    units = "in", 
-    dpi = 300, 
-    bg = "white"
-  )
+  regional_map <- p
   
   # -----------------------------------------------------------------------
   # MAP C: composite by island
   # -----------------------------------------------------------------------
   
   pdat <- df %>%
-    filter(density > 0, method == "nSPC_BLT_TOW") %>%
-    group_by(method, island, longitude, latitude) %>%
+    filter(method == "nSPC_BLT_TOW") %>%
+    group_by(island, longitude, latitude) %>%
     summarise(density = mean(density), .groups = "drop")
-  
-  pm <- prep_map_bins(pdat)
-  pdat <- pm$dat
-  n_islands <- length(unique(pdat$island))
-  ncol_c <- min(3, n_islands)
-  
-  p = ggplot(pdat, aes(longitude, latitude)) +
+  if (!nrow(pdat) || any(!is.finite(pdat$density)) || !any(pdat$density > 0)) {
+    stop("Island map requires finite composite observations and positive values.",
+         call. = FALSE)
+  }
+  pm <- prep_map_bins(pdat %>% filter(density > 0))
+  pm$size_vals <- pm$size_vals * 0.55
+  positive <- pm$dat
+  island_names <- sort(unique(pdat$island))
+  views <- unlist(lapply(island_names, function(island_name) {
+    sites <- pdat %>% filter(island == island_name)
+    full_x <- range(sites$longitude)
+    full_y <- range(sites$latitude)
+    result <- list(list(island = island_name, x = full_x, y = full_y, zoom = FALSE))
+    if (nrow(sites) >= 20) {
+      zoom_x <- unname(quantile(sites$longitude, c(0.05, 0.95)))
+      zoom_y <- unname(quantile(sites$latitude, c(0.05, 0.95)))
+      if ((diff(zoom_x) > 0 && diff(full_x) > 3 * diff(zoom_x)) ||
+          (diff(zoom_y) > 0 && diff(full_y) > 3 * diff(zoom_y))) {
+        result <- c(result, list(list(island = island_name, x = zoom_x,
+                                     y = zoom_y, zoom = TRUE)))
+      }
+    }
+    result
+  }), recursive = FALSE)
+  ncol_c <- min(3, length(views))
+
+  island_plots <- lapply(views, function(island_view) {
+    island_name <- island_view$island
+    island_sites <- pdat %>% filter(island == island_name)
+    island_positive <- positive %>% filter(island == island_name)
+    xr <- island_view$x
+    yr <- island_view$y
+    x_pad <- max(diff(xr) * 0.12, 0.002)
+    y_pad <- max(diff(yr) * 0.12, 0.002)
+    xlim <- xr + c(-x_pad, x_pad)
+    ylim <- yr + c(-y_pad, y_pad)
+    visible <- sum(island_sites$longitude >= xlim[1] & island_sites$longitude <= xlim[2] &
+                   island_sites$latitude >= ylim[1] & island_sites$latitude <= ylim[2])
+
+    p_island <- ggplot() + island_satellite(xlim, ylim)
+    p_island +
+      geom_point(data = island_sites %>% filter(density == 0),
+                 aes(longitude, latitude), shape = 21, fill = "white",
+                 colour = "grey20", size = 1.1, stroke = 0.25, alpha = 0.8) +
+      geom_point(data = island_positive,
+                 aes(longitude, latitude, size = density_bin, fill = density_bin),
+                 shape = 21, alpha = 0.9, colour = "white", stroke = 0.45) +
+      scale_fill_manual(values = pm$fill_vals, breaks = pm$levels, name = unit, drop = FALSE) +
+      scale_size_manual(values = pm$size_vals, breaks = pm$levels, name = unit, drop = FALSE) +
+      guides(fill = "none", size = "none") +
+      scale_x_continuous(n.breaks = 3, labels = longitude_labels,
+                         guide = guide_axis(check.overlap = TRUE)) +
+      scale_y_continuous(n.breaks = 3, labels = label_number(),
+                         guide = guide_axis(check.overlap = TRUE)) +
+      coord_quickmap(xlim = xlim, ylim = ylim, expand = FALSE) +
+      labs(title = paste0(island_name, if (island_view$zoom) " (close-up)" else "",
+                          "  |  ", visible, " locations"),
+           x = NULL, y = NULL) +
+      theme_minimal(base_size = 10) +
+      theme(
+        plot.title = element_text(face = "bold", size = 10, hjust = 0.5,
+                                  margin = margin(b = 5)),
+        panel.background = element_rect(fill = "#edf5f7", colour = NA),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(colour = "white", linewidth = 0.3),
+        axis.text = element_text(size = 8, colour = "grey30")
+      )
+  })
+
+  legend_plot <- ggplot(positive, aes(longitude, latitude)) +
     geom_point(aes(size = density_bin, fill = density_bin),
-               shape = 21, alpha = 0.85, colour = "grey20", stroke = 0.25) +
+               shape = 21, colour = "grey20", alpha = 0.9, show.legend = TRUE) +
     scale_fill_manual(values = pm$fill_vals, breaks = pm$levels, name = unit, drop = FALSE) +
     scale_size_manual(values = pm$size_vals, breaks = pm$levels, name = unit, drop = FALSE) +
     guides(fill = guide_legend(title.position = "top",
                                override.aes = list(shape = 21, size = unname(pm$size_vals),
                                                    colour = "grey20", alpha = 0.9)),
            size = "none") +
-    facet_wrap(~island, scales = "free", ncol = ncol_c) +
-    scale_x_continuous(n.breaks = 3, labels = label_number(accuracy = 0.1)) +
-    scale_y_continuous(n.breaks = 3, labels = label_number(accuracy = 0.1)) +
-    labs(
-      title = title_text,
-      subtitle = paste0(region_text, " | Calibrated ", ifelse(var == "abund", "abundance", "biomass"),
-                        " by island, ", year_text, "\n", max_obs_text(pdat$density)),
-      x = expression(Longitude ~ degree * W),
-      y = expression(Latitude ~ degree * N),
-      caption = "Composite nSPC-equivalent observations. Point size and color represent mean values at each survey location."
-    ) +
-    theme_pub +
+    theme_minimal(base_size = 10) +
     theme(legend.position = "right")
-  
-  dims <- facet_dims(n_islands, ncol_c, 3.6, 3.1)
+  legend_table <- ggplotGrob(legend_plot)
+  legend_index <- which(legend_table$layout$name == "guide-box-right")
+  if (length(legend_index) != 1L) stop("Could not build island map legend.", call. = FALSE)
+  legend <- legend_table$grobs[[legend_index]]
+  island_grobs <- lapply(island_plots, function(island_plot) {
+    wrap_elements(full = ggplotGrob(island_plot))
+  })
+
+  p <- (wrap_plots(island_grobs, ncol = ncol_c) | wrap_elements(full = legend)) +
+    plot_layout(widths = c(5, 1)) +
+    plot_annotation(
+      title = title_text,
+      subtitle = paste0(region_text, " | Mean calibrated ",
+                        ifelse(var == "abund", "abundance", "biomass"),
+                        " at surveyed locations, ", year_text),
+      caption = paste("Each point is the mean of all composite observations at that location, including zeros.",
+                      "White points are zero means; color and size show positive means, capped at the 99th percentile.",
+                      "Panels have independent geographic scales; close-ups supplement full island views.",
+                      "EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH https://eox.at",
+                      "(Contains modified Copernicus Sentinel data 2025); imagery resampled, points added.",
+                      "CC BY-NC-SA 4.0: https://creativecommons.org/licenses/by-nc-sa/4.0/",
+                      "Historical imagery may have gaps and is not navigation-grade.",
+                      sep = "\n"),
+      theme = theme_pub
+    )
+
+  dims <- facet_dims(length(views), ncol_c, 4.1, 3.7)
   
   ggsave(
     filename = paste0("output/plot/map_c_", species[s], "_", var, "_", region_tag, ".png"),
     plot = p, height = dims["height"], width = dims["width"],
     units = "in", dpi = 300, bg = "white"
+  )
+
+  island_detail <- p + plot_annotation(
+    title = "Island detail",
+    subtitle = paste0("Mean calibrated ", ifelse(var == "abund", "abundance", "biomass"),
+                      " at surveyed locations, including zeros"),
+    caption = paste("Each point is the mean of all composite observations at that location, including zeros.",
+                    "White points are zero means; color and size show positive means, capped at the 99th percentile.",
+                    "Panels have independent geographic scales; close-ups supplement full island views.",
+                    "EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH https://eox.at",
+                    "(Contains modified Copernicus Sentinel data 2025); imagery resampled, points added.",
+                    "CC BY-NC-SA 4.0: https://creativecommons.org/licenses/by-nc-sa/4.0/",
+                    "Historical imagery may have gaps and is not navigation-grade.",
+                    sep = "\n"),
+    theme = theme_pub
+  )
+  map_b <- wrap_elements(full = ggplotGrob(regional_map)) /
+    wrap_elements(full = patchworkGrob(island_detail)) +
+    plot_layout(heights = c(map_b_height, dims["height"]))
+  ggsave(
+    filename = paste0("output/plot/map_b_", species[s], "_", var, "_", region_tag, ".png"),
+    plot = map_b, height = map_b_height + dims["height"],
+    width = max(map_b_width, dims["width"]), units = "in", dpi = 300, bg = "white"
   )
   
   # -----------------------------------------------------------------------
@@ -433,40 +723,80 @@ for (s in 1:length(species)) {
   
   pm <- prep_map_bins(pdat)
   pdat <- pm$dat
-  n_years <- length(unique(pdat$year))
-  n_methods <- length(unique(pdat$method))
-  
-  p = ggplot(pdat, aes(longitude, latitude)) +
-    geom_point(aes(size = density_bin, fill = density_bin),
-               shape = 21, alpha = 0.80, colour = "grey20", stroke = 0.2) +
-    scale_fill_manual(values = pm$fill_vals, breaks = pm$levels, name = unit, drop = FALSE) +
-    scale_size_manual(values = pm$size_vals, breaks = pm$levels, name = unit, drop = FALSE) +
-    guides(fill = guide_legend(title.position = "top",
-                               override.aes = list(shape = 21, size = unname(pm$size_vals),
-                                                   colour = "grey20", alpha = 0.9)),
-           size = "none") +
-    facet_grid(method ~ year, labeller = labeller(method = method_labs)) +
-    labs(
-      title = title_text,
-      subtitle = paste0(region_text, " | Spatial distribution by survey method and year, ", year_text,
-                        "\n", max_obs_text(pdat$density)),
-      x = NULL, y = NULL,
-      caption = "Point size and color represent mean values within 0.1° cells."
-    ) +
-    theme_pub +
-    theme(
-      legend.position = "bottom",
-      axis.ticks = element_blank(),
-      axis.text = element_blank()
-    )
-  
+  unknown_methods <- setdiff(unique(pdat$method), names(method_labs))
+  if (length(unknown_methods)) {
+    stop("Unknown map D survey methods: ", paste(unknown_methods, collapse = ", "),
+         call. = FALSE)
+  }
+  methods_d <- names(method_labs)[names(method_labs) %in% unique(pdat$method)]
+  ncol_d <- 3
+  pm$size_vals <- pm$size_vals * 0.6
+  lon_range <- range(pdat$longitude)
+  lat_range <- range(pdat$latitude)
+  xlim_d <- lon_range + c(-1, 1) * max(diff(lon_range) * 0.05, 0.002)
+  ylim_d <- lat_range + c(-1, 1) * max(diff(lat_range) * 0.05, 0.002)
+  region_coast <- coast_for_extent(xlim_d, ylim_d)
+  rows_d <- vapply(methods_d, function(method_name) {
+    ceiling(n_distinct(pdat$year[pdat$method == method_name]) / ncol_d)
+  }, numeric(1))
+
+  method_plots <- lapply(methods_d, function(method_name) {
+    ggplot(pdat %>% filter(method == method_name), aes(longitude, latitude)) +
+      geom_polygon(data = region_coast,
+                   aes(longitude, latitude, group = group, subgroup = subgroup),
+                   fill = "grey85", colour = "grey60", linewidth = 0.2,
+                   rule = "evenodd", inherit.aes = FALSE) +
+      geom_point(aes(size = density_bin, fill = density_bin),
+                 shape = 21, alpha = 0.80, colour = "grey20", stroke = 0.2,
+                 show.legend = TRUE) +
+      scale_fill_manual(values = pm$fill_vals, breaks = pm$levels, name = unit, drop = FALSE) +
+      scale_size_manual(values = pm$size_vals, breaks = pm$levels, name = unit, drop = FALSE) +
+      guides(fill = guide_legend(title.position = "top",
+                                 override.aes = list(shape = 21, size = unname(pm$size_vals),
+                                                     colour = "grey20", alpha = 0.9)),
+             size = "none") +
+      facet_wrap(vars(year), ncol = ncol_d) +
+      scale_x_continuous(n.breaks = 3, labels = longitude_labels,
+                         guide = guide_axis(check.overlap = TRUE)) +
+      scale_y_continuous(n.breaks = 3, guide = guide_axis(check.overlap = TRUE)) +
+      coord_cartesian(xlim = xlim_d, ylim = ylim_d, expand = FALSE) +
+      labs(title = unname(method_labs[method_name]), x = NULL, y = NULL) +
+      theme_pub +
+      theme(
+        plot.title = element_text(face = "bold", size = 13, margin = margin(b = 6)),
+        plot.margin = margin(6, 8, 8, 8),
+        axis.text = element_text(size = 8, colour = "grey30"),
+        panel.spacing = grid::unit(0.7, "lines"),
+        panel.background = element_rect(fill = "#edf5f7", colour = NA)
+      )
+  })
+
+  p <- wrap_plots(method_plots, ncol = 1, heights = rows_d + 0.35,
+                  guides = "collect") &
+    theme(legend.position = "bottom")
+  p <- p + plot_annotation(
+    title = title_text,
+    subtitle = paste0(region_text, " | Spatial distribution by survey method and year, ", year_text,
+                      "\n", sub("Maximum observed", "Maximum cell mean",
+                                max_obs_text(pdat$density), fixed = TRUE)),
+    caption = paste("Each section is a survey method; panels show years with positive observations.",
+                    "All panels share the same geographic extent and color/size scale.",
+                    "Points are means of positive observations within 0.1° cells, capped at the 99th percentile for display.",
+                    "Small or widely separated islands are easier to inspect in the island-detail maps.",
+                    sep = "\n"),
+    theme = theme_pub + theme(legend.position = "bottom")
+  )
+
+  dims <- c(width = 14, height = 3 + sum(rows_d) * 1.75 + length(methods_d) * 0.45)
   ggsave(
     file = paste0("output/plot/map_d_", species[s], "_", var, "_", region_tag, ".png"),
     plot = p,
-    height = max(6, 2.0 + 1.65 * n_methods),
-    width = max(10, 2.0 + 1.55 * n_years),
+    height = dims["height"],
+    width = dims["width"],
     units = "in", dpi = 300, bg = "white"
   )
+
+  if (plot_selection == "maps") next
   
   # -----------------------------------------------------------------------
   # DEPTH
